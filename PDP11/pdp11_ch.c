@@ -41,6 +41,8 @@
 #error The CH11 device only works with Unibus machines.
 #endif
 
+#include "sim_tmxr.h"
+
 /* CSR bits */
 #define TIE   0000001 /* Timer interrupt enable */
 #define LOOP  0000002 /* Loop back */
@@ -59,7 +61,9 @@
 #define STATUS_BITS (TIE|LOOP|SPY|RXIE|TXIE|TXA|TXD|LOST|CRC|RXD)
 #define COMMAND_BITS (TIE|LOOP|SPY|RXIE|TXIE)
 
+#define CHUDP_HEADER 4
 #define IOLN_CH 010
+#define DBG_TRC  0x0001
 
 t_stat ch_svc(UNIT *);
 t_stat ch_reset (DEVICE *);
@@ -73,13 +77,17 @@ t_stat ch_dep (t_value, t_addr, UNIT *, int32);
 t_stat ch_help (FILE *, DEVICE *, UNIT *, int32, const char *);
 const char *ch_description (DEVICE *);
 
+int port = 42043;
 int status;
 int address;
 int rx_count;
 int tx_count;
 int lost_count;
-int rx_buffer[252];
-int tx_buffer[252];
+int rx_buffer[252 + CHUDP_HEADER];
+int tx_buffer[252 + CHUDP_HEADER];
+
+TMLN udp_lines[1] = { {0} };
+TMXR udp_tmxr = { 1, NULL, 0, udp_lines};
 
 UNIT ch_unit[] = {
   { UDATA (&ch_svc, UNIT_IDLE|UNIT_ATTABLE, 0) },
@@ -89,6 +97,19 @@ REG ch_reg[] = {
   { NULL }  };
 
 MTAB ch_mod[] = {
+#if defined (VM_PDP11)
+  { MTAB_XTD|MTAB_VDV|MTAB_VALR, 010, "ADDRESS", "ADDRESS",
+    &set_addr, &show_addr, NULL },
+  { MTAB_XTD|MTAB_VDV, 0, NULL, "AUTOCONFIGURE",
+    &set_addr_flt, NULL, NULL },
+  { MTAB_XTD|MTAB_VDV|MTAB_VALR, 0, "VECTOR", NULL,
+    &set_vec, &show_vec, NULL },
+#else
+  { MTAB_XTD|MTAB_VDV, 0, "ADDRESS", NULL,
+    NULL, &show_addr, NULL, "Unibus address" },
+  { MTAB_XTD|MTAB_VDV, 0, "VECTOR", NULL,
+    NULL, &show_vec, NULL, "Interrupt vector" },
+#endif
   { 0 },
 };
 
@@ -97,26 +118,52 @@ DIB ch_dib = {
   1, IVCL (CH), 0, { &ch_int }, IOLN_CH
 };
 
+DEBTAB ch_debug[] = {
+    { "TRC",       DBG_TRC,   "Trace" },
+    { 0 }
+};
+
 DEVICE ch_dev = {
     "CH", ch_unit, ch_reg, ch_mod,
     1, 8, 16, 1, 8, 16,
     &ch_ex, &ch_dep, &ch_reset,
     NULL, &ch_attach, &ch_detach,
     &ch_dib, DEV_DISABLE | DEV_DIS | DEV_UBUS | DEV_DEBUG,
-    0, NULL, NULL, NULL, &ch_help, NULL, NULL,
+    0, ch_debug, NULL, NULL, &ch_help, NULL, NULL,
     &ch_description
   };
 
 void ch_transmit ()
 {
-  /* Transmit packet from tx_buffer. Set TXD. */
-  ch_int ();
+  tmxr_poll_tx (&udp_tmxr);
+  if (tmxr_put_packet_ln (&udp_lines[0], (const uint8 *)&tx_buffer,
+                          CHUDP_HEADER + 2 * (size_t)tx_count) == SCPE_OK) {
+    status |= TXD;
+    ch_int ();
+  }
 }
 
 void ch_receive (void)
 {
-  /* Store incoming packet in rx_buffer.  Set rx_count.  Set RXD. */
-  ch_int ();
+  size_t count;
+  const uint8 *p;
+
+  tmxr_poll_rx (&udp_tmxr);
+  tmxr_get_packet_ln (&udp_lines[0], &p, &count);
+  if (p) {
+    sim_debug (DBG_TRC, &ch_dev, "Received packet, %d bytes\n", (int)count);
+    if ((status & RXD) == 0) {
+      count = (count + 1) & 0376;
+      memcpy (rx_buffer + (252 - count), p + CHUDP_HEADER, count);
+      rx_count = count >> 1;
+      sim_debug (DBG_TRC, &ch_dev, "Rx count, %d\n", rx_count);
+      status |= RXD;
+      ch_int ();
+    }
+  } else {
+    sim_debug (DBG_TRC, &ch_dev, "Lost packet\n");
+    lost_count++;
+  }
 }
 
 t_stat ch_rd (int32 *data, int32 PA, int32 access)
@@ -126,19 +173,32 @@ t_stat ch_rd (int32 *data, int32 PA, int32 access)
   switch (reg) {
   case 00: /* Status */
     *data = (status & STATUS_BITS) | ((lost_count << 9) & LOST);
+    sim_debug (DBG_TRC, &ch_dev, "Read status: %06o\n", *data);
     break;
   case 01: /* Address */
     *data = address;
+    sim_debug (DBG_TRC, &ch_dev, "Read address: %06o\n", *data);
     break;
   case 02: /* Read */
-    *data = rx_buffer[rx_count];
-    rx_count--;
+    if (rx_count == 0) {
+      *data = 0;
+      sim_debug (DBG_TRC, &ch_dev, "Read empty buffer\n");
+    } else {
+      *data = rx_buffer[126-rx_count];
+      sim_debug (DBG_TRC, &ch_dev, "Read buffer word %d: %06o\n",
+                 126-rx_count, *data);
+      rx_count--;
+    }
     break;
   case 03: /* Count */
     *data = ((16 * rx_count) - 1) & 07777;
+    sim_debug (DBG_TRC, &ch_dev, "Read bit count: %d\n", *data);
     break;
   case 05: /* Start */
     ch_transmit ();
+    sim_debug (DBG_TRC, &ch_dev, "Start transmission\n");
+    status &= ~TXD;
+    tx_count = 0;
     *data = address;
     break;
   default:
@@ -152,13 +212,16 @@ t_stat ch_rd (int32 *data, int32 PA, int32 access)
 t_stat ch_command (int32 data)
 {
   if (data & CRX) {
+    sim_debug (DBG_TRC, &ch_dev, "Clear RX\n");
     status &= ~RXD;
     lost_count = 0;
   }
   if (data & CTX) {
+    sim_debug (DBG_TRC, &ch_dev, "Clear TX\n");
     status |= TXD;
   }
   if (data & RESET) {
+    sim_debug (DBG_TRC, &ch_dev, "Reset\n");
     ch_reset (&ch_dev);
   }
 }
@@ -169,11 +232,27 @@ t_stat ch_wr (int32 data, int32 PA, int32 access)
 
   switch (reg) {
   case 00: /* Command */
+    if (data & TIE)
+      sim_debug (DBG_TRC, &ch_dev, "Timer interrupt enable\n");
+    if (data & LOOP)
+      sim_debug (DBG_TRC, &ch_dev, "Loopback\n");
+    if (data & SPY)
+      sim_debug (DBG_TRC, &ch_dev, "Spy mode\n");
+    if (data & RXIE)
+      sim_debug (DBG_TRC, &ch_dev, "RX interrupt enable\n");
+    if (data & TXIE)
+      sim_debug (DBG_TRC, &ch_dev, "TX interrupt enable\n");
     status = (status & ~COMMAND_BITS) | (data & COMMAND_BITS);
     return ch_command (data);
   case 01: /* Write */
-    tx_buffer[tx_count] = data;
-    data++;
+    if (tx_count < 126) {
+      sim_debug (DBG_TRC, &ch_dev, "Write buffer word %d: %06o\n",
+                 tx_count, data);
+      tx_buffer[tx_count + CHUDP_HEADER] = data;
+      tx_count++;
+    } else {
+      sim_debug (DBG_TRC, &ch_dev, "Write buffer overflow\n");
+    }
     break;
   }
 
@@ -182,39 +261,49 @@ t_stat ch_wr (int32 data, int32 PA, int32 access)
 
 t_stat ch_svc(UNIT *uptr)
 {
-  if (0 /* incoming */) {
-    if ((status & RXD) == 0) {
-      ch_receive ();
-    }
-  } else {
-    lost_count++;
-  }
+  ch_receive ();
   return SCPE_OK;
 }
 
 int32 ch_int (void)
 {
-  if (status & (RXD | TXD))
+  if (status & (RXD | TXD)) {
+    sim_debug (DBG_TRC, &ch_dev, "Interrupt\n");
     return 0270;
+  }
   return 0;
 }
 
 t_stat ch_attach (UNIT *uptr, CONST char *cptr)
 {
+  char linkinfo[256];
+
+  sprintf (linkinfo, "Buffer=%d,Line=%d,%d,UDP,Connect=%s",
+           (int)sizeof tx_buffer, 0, port, cptr);
+  tmxr_open_master (&udp_tmxr, linkinfo);
+
   return SCPE_OK;
 }
 
 t_stat ch_detach (UNIT *uptr)
 {
+  tmxr_detach_ln (&udp_lines[0]);
   return SCPE_OK;
 }
 
 t_stat ch_reset (DEVICE *dptr)
 {
+
   status = 0;
   rx_count = 0;
   tx_count = 0;
   lost_count = 0;
+
+  tx_buffer[0] = 1; /* CHUDP header */
+  tx_buffer[1] = 1;
+  tx_buffer[2] = 0;
+  tx_buffer[3] = 0;
+
   return SCPE_OK;
 }
 
