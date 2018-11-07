@@ -304,7 +304,7 @@ t_stat ch_reset (DEVICE *dptr)
   tx_buffer[2] = 0;
   tx_buffer[3] = 0;
 
-  return SCPE_OK;
+  return auto_config (dptr->name, (dptr->flags & DEV_DIS)? 0 : 1);  /* auto config */
 }
 
 t_stat ch_ex (t_value *vptr, t_addr addr, UNIT *uptr, int32 sw)
