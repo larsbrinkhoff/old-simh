@@ -372,7 +372,7 @@ t_stat ch_wr (int32 data, int32 PA, int32 access)
 t_stat ch_svc(UNIT *uptr)
 {
   ch_receive ();
-  sim_activate (uptr, 1000);
+  sim_clock_coschedule (uptr, 1000);
   return SCPE_OK;
 }
 
