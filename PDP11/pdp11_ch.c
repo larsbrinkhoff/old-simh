@@ -326,8 +326,7 @@ void ch_command (int32 data)
     rx_count = 0;
     status &= ~(RXD|CRC);
     ch_lines[0].rcve = TRUE;
-      sim_debug (DBG_TRC, &ch_dev, "Rx on\n");
-    sim_activate (ch_unit, 1000);
+    sim_debug (DBG_TRC, &ch_dev, "Rx on\n");
     lost_count = 0;
   }
   if (data & CTX) {
@@ -369,6 +368,7 @@ t_stat ch_wr (int32 data, int32 PA, int32 access)
 t_stat ch_svc(UNIT *uptr)
 {
   ch_receive ();
+  tmxr_poll_conn (&ch_tmxr);
   sim_clock_coschedule (uptr, 1000);
   return SCPE_OK;
 }
@@ -376,25 +376,29 @@ t_stat ch_svc(UNIT *uptr)
 t_stat ch_attach (UNIT *uptr, CONST char *cptr)
 {
   char linkinfo[256];
+  t_stat r;
 
   if (address == -1)
     return sim_messagef (SCPE_2FARG, "Must set Chaosnet node address first.");
 
   sprintf (linkinfo, "Buffer=%d,Line=%d,UDP,%s,PACKET,Connect=%s",
            (int)sizeof tx_buffer, 0, cptr, peer);
-  if (tmxr_open_master (&ch_tmxr, linkinfo) == SCPE_OK) {
+  r = tmxr_open_master (&ch_tmxr, linkinfo);
+  if (r == SCPE_OK) {
     uptr->flags |= UNIT_ATT;
     ch_tmxr.uptr = uptr;
-    ch_tmxr.last_poll_time = 1;
-    tmxr_poll_conn (&ch_tmxr);
-  } else
+  } else {
     sim_debug (DBG_ERR, &ch_dev, "TMXR error opening master\n");
+    return r;
+  }
 
+  sim_clock_coschedule (uptr, 1);
   return SCPE_OK;
 }
 
 t_stat ch_detach (UNIT *uptr)
 {
+  sim_cancel (uptr);
   tmxr_detach_ln (&ch_lines[0]);
   uptr->flags &= ~UNIT_ATT;
   return SCPE_OK;
