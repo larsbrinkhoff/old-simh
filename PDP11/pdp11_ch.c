@@ -100,6 +100,12 @@ UNIT ch_unit[] = {
 };
 
 REG ch_reg[] = {
+  { GRDATA ( CSR,     status,       16, 16, 0), REG_FIT},
+  { GRDATA ( RXCNT,   rx_count,     16, 16, 0), REG_FIT|REG_RO},
+  { GRDATA ( TXCNT,   tx_count,     16, 16, 0), REG_FIT|REG_RO},
+  { GRDATA ( LSTCNT,  lost_count,   16, 16, 0), REG_FIT|REG_RO},
+  { BRDATA ( RXBUF,   rx_buffer,    16,  8, sizeof rx_buffer), REG_FIT},
+  { BRDATA ( TXBUF,   tx_buffer,    16,  8, sizeof tx_buffer), REG_FIT},
   { NULL }  };
 
 MTAB ch_mod[] = {
