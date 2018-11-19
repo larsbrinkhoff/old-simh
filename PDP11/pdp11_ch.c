@@ -367,9 +367,11 @@ t_stat ch_wr (int32 data, int32 PA, int32 access)
 
 t_stat ch_svc(UNIT *uptr)
 {
-  ch_receive ();
-  tmxr_poll_conn (&ch_tmxr);
   sim_clock_coschedule (uptr, 1000);
+  if (tmxr_poll_conn (&ch_tmxr) >= 0)
+    ch_lines[0].rcve = TRUE;
+  if (ch_lines[0].conn)
+    ch_receive ();
   return SCPE_OK;
 }
 
@@ -379,28 +381,26 @@ t_stat ch_attach (UNIT *uptr, CONST char *cptr)
   t_stat r;
 
   if (address == -1)
-    return sim_messagef (SCPE_2FARG, "Must set Chaosnet node address first.");
+    return sim_messagef (SCPE_2FARG, "Must set Chaosnet NODE address first \"SET CH NODE=val\"\n");
+  if (peer[0] == '\0')
+    return sim_messagef (SCPE_2FARG, "Must set Chaosnet PEER \"SET CH PEER=host:port\"\n");
 
   sprintf (linkinfo, "Buffer=%d,Line=%d,UDP,%s,PACKET,Connect=%s",
            (int)sizeof tx_buffer, 0, cptr, peer);
-  r = tmxr_open_master (&ch_tmxr, linkinfo);
-  if (r == SCPE_OK) {
-    uptr->flags |= UNIT_ATT;
-    ch_tmxr.uptr = uptr;
-  } else {
+  r = tmxr_attach (&ch_tmxr, uptr, linkinfo);
+  if (r != SCPE_OK) {
     sim_debug (DBG_ERR, &ch_dev, "TMXR error opening master\n");
-    return r;
+    return sim_messagef (r, "Error Opening: %s\n", peer);
   }
 
-  sim_clock_coschedule (uptr, 1);
+  sim_clock_coschedule (uptr, 1000);
   return SCPE_OK;
 }
 
 t_stat ch_detach (UNIT *uptr)
 {
   sim_cancel (uptr);
-  tmxr_detach_ln (&ch_lines[0]);
-  uptr->flags &= ~UNIT_ATT;
+  tmxr_detach (&ch_tmxr, uptr);
   return SCPE_OK;
 }
 
@@ -411,7 +411,6 @@ t_stat ch_reset (DEVICE *dptr)
   tx_count = 0;
   lost_count = 0;
 
-  ch_lines[0].rcve = TRUE;
   sim_debug (DBG_TRC, &ch_dev, "Rx on\n");
 
   tx_buffer[0] = 1; /* CHUDP header */
@@ -431,8 +430,6 @@ t_stat ch_show_peer (FILE* st, UNIT* uptr, int32 val, CONST void* desc)
 
 t_stat ch_set_peer (UNIT* uptr, int32 val, CONST char* cptr, void* desc)
 {
-  t_stat r;
-
   if ((cptr == NULL) || (*cptr == 0))
     return SCPE_ARG;
   if (uptr->flags & UNIT_ATT)
@@ -474,4 +471,5 @@ const char *ch_description (DEVICE *dptr)
 t_stat ch_help (FILE *st, DEVICE *dptr, UNIT *uptr, int32 flag, const char *cptr)
 {
   fprintf (st, "CH11 Unibus Chaosnet interface\n\n");
+  return SCPE_OK;
 }
