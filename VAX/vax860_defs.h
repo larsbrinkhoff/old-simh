@@ -362,7 +362,7 @@ typedef struct {
 #define INT_V_DUPRX     11
 #define INT_V_DUPTX     12
 #define INT_V_RK        13
-#define INT_V_CH        8
+#define INT_V_CH        14
 
 #define INT_V_LPT       0                               /* BR4 */
 #define INT_V_PTR       1
