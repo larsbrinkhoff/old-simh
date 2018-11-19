@@ -76,8 +76,6 @@ t_stat ch_attach (UNIT *, CONST char *);
 t_stat ch_detach (UNIT *);
 t_stat ch_rd(int32 *, int32, int32);
 t_stat ch_wr(int32, int32, int32);
-t_stat ch_ex (t_value *, t_addr, UNIT *, int32);
-t_stat ch_dep (t_value, t_addr, UNIT *, int32);
 t_stat ch_show_port (FILE* st, UNIT* uptr, int32 val, CONST void* desc);
 t_stat ch_set_port (UNIT* uptr, int32 val, CONST char* cptr, void* desc);
 t_stat ch_show_node (FILE* st, UNIT* uptr, int32 val, CONST void* desc);
@@ -143,7 +141,7 @@ DEBTAB ch_debug[] = {
 DEVICE ch_dev = {
     "CH", ch_unit, ch_reg, ch_mod,
     1, 8, 16, 1, 8, 16,
-    &ch_ex, &ch_dep, &ch_reset,
+    NULL, NULL, &ch_reset,
     NULL, &ch_attach, &ch_detach,
     &ch_dib, DEV_DISABLE | DEV_DIS | DEV_UBUS | DEV_DEBUG,
     0, ch_debug, NULL, NULL, &ch_help, NULL, NULL,
@@ -422,16 +420,6 @@ t_stat ch_reset (DEVICE *dptr)
 
   ch_test_int ();
   return auto_config (dptr->name, (dptr->flags & DEV_DIS)? 0 : 1);  /* auto config */
-}
-
-t_stat ch_ex (t_value *vptr, t_addr addr, UNIT *uptr, int32 sw)
-{
-  return SCPE_OK;
-}
-
-t_stat ch_dep (t_value val, t_addr addr, UNIT *uptr, int32 sw)
-{
-  return SCPE_OK;
 }
 
 t_stat ch_show_port (FILE* st, UNIT* uptr, int32 val, CONST void* desc)
