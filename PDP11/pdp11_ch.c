@@ -76,14 +76,14 @@ t_stat ch_attach (UNIT *, CONST char *);
 t_stat ch_detach (UNIT *);
 t_stat ch_rd(int32 *, int32, int32);
 t_stat ch_wr(int32, int32, int32);
-t_stat ch_show_port (FILE* st, UNIT* uptr, int32 val, CONST void* desc);
-t_stat ch_set_port (UNIT* uptr, int32 val, CONST char* cptr, void* desc);
+t_stat ch_show_peer (FILE* st, UNIT* uptr, int32 val, CONST void* desc);
+t_stat ch_set_peer (UNIT* uptr, int32 val, CONST char* cptr, void* desc);
 t_stat ch_show_node (FILE* st, UNIT* uptr, int32 val, CONST void* desc);
 t_stat ch_set_node (UNIT* uptr, int32 val, CONST char* cptr, void* desc);
 t_stat ch_help (FILE *, DEVICE *, UNIT *, int32, const char *);
 const char *ch_description (DEVICE *);
 
-static int port = 42042;
+static char peer[256];
 static int status;
 static int address = -1;
 static int rx_count;
@@ -113,8 +113,8 @@ MTAB ch_mod[] = {
     NULL, &show_addr, NULL, "Unibus address" },
   { MTAB_XTD|MTAB_VDV, 0, "VECTOR", NULL,
     NULL, &show_vec, NULL, "Interrupt vector" },
-  { MTAB_XTD|MTAB_VDV|MTAB_VALR, 0, "PORT", "PORT",
-    &ch_set_port, &ch_show_port, NULL },
+  { MTAB_XTD|MTAB_VDV|MTAB_VALR, 0, "PEER", "PEER",
+    &ch_set_peer, &ch_show_peer, NULL },
   { MTAB_XTD|MTAB_VDV|MTAB_VALR, 0, "NODE", "NODE",
     &ch_set_node, &ch_show_node, NULL },
   { 0 },
@@ -380,8 +380,8 @@ t_stat ch_attach (UNIT *uptr, CONST char *cptr)
   if (address == -1)
     return sim_messagef (SCPE_2FARG, "Must set Chaosnet node address first.");
 
-  sprintf (linkinfo, "Buffer=%d,Line=%d,%d,UDP,Connect=%s",
-           (int)sizeof tx_buffer, 0, port, cptr);
+  sprintf (linkinfo, "Buffer=%d,Line=%d,UDP,%s,PACKET,Connect=%s",
+           (int)sizeof tx_buffer, 0, cptr, peer);
   if (tmxr_open_master (&ch_tmxr, linkinfo) == SCPE_OK) {
     uptr->flags |= UNIT_ATT;
     ch_tmxr.uptr = uptr;
@@ -419,27 +419,22 @@ t_stat ch_reset (DEVICE *dptr)
   return auto_config (dptr->name, (dptr->flags & DEV_DIS)? 0 : 1);  /* auto config */
 }
 
-t_stat ch_show_port (FILE* st, UNIT* uptr, int32 val, CONST void* desc)
+t_stat ch_show_peer (FILE* st, UNIT* uptr, int32 val, CONST void* desc)
 {
-  fprintf (st, "port=%d", port);
+  fprintf (st, "peer=%s", peer);
   return SCPE_OK;
 }
 
-t_stat ch_set_port (UNIT* uptr, int32 val, CONST char* cptr, void* desc)
+t_stat ch_set_peer (UNIT* uptr, int32 val, CONST char* cptr, void* desc)
 {
   t_stat r;
-  int x;
 
   if ((cptr == NULL) || (*cptr == 0))
     return SCPE_ARG;
   if (uptr->flags & UNIT_ATT)
     return SCPE_ALATT;
 
-  x = get_uint (cptr, 10, 65535, &r);
-  if (r != SCPE_OK)
-    return SCPE_ARG;
-
-  port = x;
+  strncpy (peer, cptr, sizeof peer);
   return SCPE_OK;
 }
 
