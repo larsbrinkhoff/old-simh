@@ -328,6 +328,7 @@ void ch_command (int32 data)
     ch_lines[0].rcve = TRUE;
     sim_debug (DBG_TRC, &ch_dev, "Rx on\n");
     lost_count = 0;
+    sim_activate_abs (ch_unit, 100);   /* Force next packet read attempt */
   }
   if (data & CTX) {
     sim_debug (DBG_REG, &ch_dev, "Clear TX\n");
@@ -370,7 +371,7 @@ t_stat ch_svc(UNIT *uptr)
   sim_clock_coschedule (uptr, 1000);
   if (tmxr_poll_conn (&ch_tmxr) >= 0)
     ch_lines[0].rcve = TRUE;
-  if (ch_lines[0].conn)
+  if (ch_lines[0].conn && ch_lines[0].rcve)
     ch_receive ();
   return SCPE_OK;
 }
