@@ -49,6 +49,8 @@ enum display_type {
     DIS_VR48 = 48,
     DIS_TYPE340 = 340,
     DIS_NG = 999,
+/* This is a preprocessor symbol so we can check for it at compile time. */
+#define DIS_GRAPHICS2 2
 };
 
 /*

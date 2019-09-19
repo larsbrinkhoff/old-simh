@@ -107,6 +107,7 @@ extern DEVICE dr15_dev;
 #endif
 #if defined (GRAPHICS2)
 extern DEVICE g2out_dev, g2in_dev;
+extern DEVICE graphics2_dev;
 #endif
 #if defined (TYPE340)
 extern DEVICE dpy_dev;
@@ -187,6 +188,7 @@ DEVICE *sim_devices[] = {
 #endif
 #if defined (GRAPHICS2)
     &g2out_dev, &g2in_dev,
+    &graphics2_dev,
 #endif
 #if defined (TYPE340)
     &dpy_dev,

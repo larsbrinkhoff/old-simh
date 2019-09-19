@@ -241,7 +241,14 @@ static struct display displays[] = {
      * 512x512, out of 800x600
      * 0,0 at middle
      */
-    { DIS_NG, "NG Display", &color_p31, NULL, 512, 512 }
+    { DIS_NG, "NG Display", &color_p31, NULL, 512, 512 },
+
+    /*
+     * GRAHPICS-2 Display system
+     * on PDP-7/9
+     *
+     */
+    { DIS_GRAPHICS2, "GRAPHICS-2", &color_p7, NULL, 1024, 1024 },
 };
 
 /*
@@ -1039,7 +1046,9 @@ display_keyup(int k)
 {
     unsigned long test_switches, test_switches2;
 
+#if DISPLAY_TYPE == DIS_TYPE340
     cpu_get_switches(&test_switches, &test_switches2);
+#endif
     switch (k) {
 /* handle spacewar switches: see display.h for copious commentary */
 #define SWSW(LC,UC,BIT,POS36,NAME36) \
@@ -1100,5 +1109,8 @@ display_keyup(int k)
     case ' ': test_switches = test_switches2 = 0; break;
     default: return;
     }
+
+#if DISPLAY_TYPE == DIS_TYPE340
     cpu_set_switches(test_switches, test_switches2);
+#endif
 }

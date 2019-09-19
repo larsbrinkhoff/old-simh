@@ -114,8 +114,8 @@ endif
 ifneq (,$(or $(findstring pdp10-ka,$(MAKECMDGOALS)),$(findstring pdp10-ki,$(MAKECMDGOALS))))
   NETWORK_USEFUL = true
 endif
-# building the PDP-7 needs video support
-ifneq (,$(findstring pdp7,$(MAKECMDGOALS)))
+# building the PDP-7 and -9 need video support
+ifneq (,$(or $(findstring pdp7,$(MAKECMDGOALS)),$(findstring pdp9,$(MAKECMDGOALS))))
   VIDEO_USEFUL = true
 endif
 # building the pdp11, pdp10, or any vax simulator could use networking support
@@ -600,6 +600,7 @@ ifeq ($(WIN32),)  #*nix Environments (&& cygwin)
           DISPLAYL = ${DISPLAYD}/display.c $(DISPLAYD)/sim_ws.c
           DISPLAYVT = ${DISPLAYD}/vt11.c
           DISPLAY340 = ${DISPLAYD}/type340.c
+          DISPLAYG2 = ${DISPLAYD}/graphics2.c
           DISPLAYNG = ${DISPLAYD}/ng.c
           DISPLAY_OPT += -DUSE_DISPLAY $(VIDEO_CCDEFS) $(VIDEO_LDFLAGS)
           $(info using libSDL2: $(call find_include,SDL2/SDL))
@@ -625,6 +626,7 @@ ifeq ($(WIN32),)  #*nix Environments (&& cygwin)
             DISPLAYL = ${DISPLAYD}/display.c $(DISPLAYD)/sim_ws.c
             DISPLAYVT = ${DISPLAYD}/vt11.c
             DISPLAY340 = ${DISPLAYD}/type340.c
+            DISPLAYG2 = ${DISPLAYD}/graphics2.c
             DISPLAYNG = ${DISPLAYD}/ng.c
             DISPLAY_OPT += -DUSE_DISPLAY $(VIDEO_CCDEFS) $(VIDEO_LDFLAGS)
             $(info using libSDL: $(call find_include,SDL/SDL))
@@ -997,6 +999,7 @@ else
       DISPLAYL = ${DISPLAYD}/display.c $(DISPLAYD)/sim_ws.c
       DISPLAYVT = ${DISPLAYD}/vt11.c
       DISPLAY340 = ${DISPLAYD}/type340.c
+      DISPLAYG2 = ${DISPLAYD}/graphics2.c
       DISPLAYNG = ${DISPLAYD}/ng.c
       DISPLAY_OPT += -DUSE_DISPLAY $(VIDEO_CCDEFS) $(VIDEO_LDFLAGS)
     else
@@ -1289,11 +1292,12 @@ PDP18B = ${PDP18BD}/pdp18b_dt.c ${PDP18BD}/pdp18b_drm.c ${PDP18BD}/pdp18b_cpu.c 
 
 ifneq (,$(DISPLAY_OPT))
   PDP7_DISPLAY_OPT = -DDISPLAY_TYPE=DIS_TYPE30 -DPIX_SCALE=RES_HALF
+  PDP9_DISPLAY_OPT = -DDISPLAY_TYPE=DIS_GRAPHICS2 -DPIX_SCALE=RES_HALF
 endif
 
 PDP4_OPT = -DPDP4 -I ${PDP18BD}
 PDP7_OPT = -DPDP7 -I ${PDP18BD} $(DISPLAY_OPT) $(PDP7_DISPLAY_OPT)
-PDP9_OPT = -DPDP9 -I ${PDP18BD}
+PDP9_OPT = -DPDP9 -I ${PDP18BD} $(DISPLAY_OPT) $(PDP9_DISPLAY_OPT)
 PDP15_OPT = -DPDP15 -I ${PDP18BD}
 
 
@@ -2072,7 +2076,8 @@ pdp7 : ${BIN}pdp7${EXE}
 
 ${BIN}pdp7${EXE} : ${PDP18B} ${PDP18BD}/pdp18b_dpy.c ${DISPLAYL} $(DISPLAY340) ${SIM}
 	${MKDIRBIN}
-	${CC} ${PDP18B} ${PDP18BD}/pdp18b_dpy.c ${DISPLAYL} $(DISPLAY340) ${SIM} ${PDP7_OPT} $(CC_OUTSPEC) ${LDFLAGS}
+	${CC} ${PDP18B} ${PDP18BD}/pdp18b_dpy.c ${PDP18BD}/pdp18b_graphics2.c ${DISPLAYL} $(DISPLAY340) \
+	$(DISPLAYG2) ${SIM} ${PDP7_OPT} $(CC_OUTSPEC) ${LDFLAGS}
 ifneq (,$(call find_test,${PDP18BD},pdp7))
 	$@ $(call find_test,${PDP18BD},pdp7) $(TEST_ARG)
 endif
@@ -2090,7 +2095,7 @@ pdp9 : ${BIN}pdp9${EXE}
 
 ${BIN}pdp9${EXE} : ${PDP18B} ${SIM}
 	${MKDIRBIN}
-	${CC} ${PDP18B} ${SIM} ${PDP9_OPT} $(CC_OUTSPEC) ${LDFLAGS}
+	${CC} ${PDP18B} ${PDP18BD}/pdp18b_graphics2.c $(DISPLAYL) $(DISPLAYG2) ${SIM} ${PDP9_OPT} $(CC_OUTSPEC) ${LDFLAGS}
 ifneq (,$(call find_test,${PDP18BD},pdp9))
 	$@ $(call find_test,${PDP18BD},pdp9) $(TEST_ARG)
 endif

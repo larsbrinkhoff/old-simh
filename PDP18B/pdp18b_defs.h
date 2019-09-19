@@ -162,6 +162,7 @@
 #define MTA             0                               /* magtape */
 #define TC02            0                               /* DECtape */
 #define TTY1            4                               /* second Teletype(s) */
+#define GRAPHICS2       0                               /* BTL display */
 #define BRMASK          0076000                         /* bounds mask */
 #elif defined (PDP15)
 #define ADDRSIZE        17
