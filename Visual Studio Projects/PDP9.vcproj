@@ -192,7 +192,15 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm"
 			>
 			<File
+				RelativePath="..\display\display.c"
+				>
+			</File>
+			<File
 				RelativePath="..\PDP18B\pdp18b_cpu.c"
+				>
+			</File>
+			<File
+				RelativePath="..\PDP18B\pdp18b_dpy.c"
 				>
 			</File>
 			<File
@@ -283,11 +291,23 @@
 				RelativePath="..\sim_video.c"
 				>
 			</File>
+			<File
+				RelativePath="..\display\sim_ws.c"
+				>
+			</File>
+			<File
+				RelativePath="..\display\graphics2.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc"
 			>
+			<File
+				RelativePath="..\display\display.h"
+				>
+			</File>
 			<File
 				RelativePath="..\PDP18B\pdp18b_defs.h"
 				>
@@ -342,6 +362,10 @@
 			</File>
 			<File
 				RelativePath="..\sim_video.h"
+				>
+			</File>
+			<File
+				RelativePath="..\display\graphics2.h"
 				>
 			</File>
 		</Filter>
