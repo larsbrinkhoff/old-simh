@@ -43,15 +43,25 @@
  */
 #define DPY_CYCLE_US    100
 
-int32 graphics205 (int32 dev, int32 pulse, int32 dat);
-int32 graphics206 (int32 dev, int32 pulse, int32 dat);
-int32 graphics207 (int32 dev, int32 pulse, int32 dat);
-int32 graphics210 (int32 dev, int32 pulse, int32 dat);
+static int32 iot05 (int32 dev, int32 pulse, int32 dat);
+static int32 iot06 (int32 dev, int32 pulse, int32 dat);
+static int32 iot07 (int32 dev, int32 pulse, int32 dat);
+static int32 iot10 (int32 dev, int32 pulse, int32 dat);
+static int32 iot14 (int32 dev, int32 pulse, int32 dat);
+static int32 iot34 (int32 dev, int32 pulse, int32 dat);
+static int32 iot43 (int32 dev, int32 pulse, int32 dat);
+static int32 iot44 (int32 dev, int32 pulse, int32 dat);
+static int32 iot45 (int32 dev, int32 pulse, int32 dat);
 int32 graphics2_iors (void);
 t_stat graphics2_svc (UNIT *uptr);
 t_stat graphics2_reset (DEVICE *dptr);
 
-DIB graphics2_dib = { DEV_G2D1, 4, &graphics2_iors, { &graphics205, &graphics206, &graphics207, &graphics210 } };
+DIB graphics2_dib1 = { DEV_G2D1, 4, &graphics2_iors,
+		       { &iot05, &iot06, &iot07, &iot10 } };
+DIB graphics2_dib2 = { DEV_G2D3, 1, &graphics2_iors, { &iot14 } };
+DIB graphics2_dib3 = { DEV_G2D4, 1, &graphics2_iors, { &iot34 } };
+DIB graphics2_dib4 = { DEV_G2KB, 3, &graphics2_iors,
+		       { &iot43,  &iot44,  &iot45 } };
 
 UNIT graphics2_unit[] = {
     { UDATA (&graphics2_svc, 0, 0) },
@@ -69,7 +79,7 @@ DEVICE graphics2_dev = {
     1, 8, 24, 1, 8, 18,
     NULL, NULL, &graphics2_reset,
     NULL, NULL, NULL,
-    &graphics2_dib, DEV_DISABLE | DEV_DIS | DEV_DEBUG, 0,
+    &graphics2_dib1, DEV_DISABLE | DEV_DIS | DEV_DEBUG, 0,
     graphics2_deb, NULL, NULL
     };
 
@@ -118,86 +128,128 @@ int32 graphics2_iors (void)
 #endif
 }
 
-int32 graphics205 (int32 dev, int32 pulse, int32 dat)
+static int32 iot05 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7005%02o, %06o\n", pulse, dat);
 
   if (pulse & 001) {
-    if (g2_sense(ST340_VEDGE))
-      dat |= IOT_SKP;
+    /* CDF, clear display flags */
   }
 
   if (pulse & 002) {
-    dat |= g2_get_dac();
+    /* WDA, write display address */
   }
 
   if (pulse & 004) {
-    g2_clear (ST340_LPHIT);
-    sim_activate_abs (graphics2_unit, 0);
+    /* ECR, enable continuous run */
+  }
+
+  if (pulse & 020) {
+    /* 24 ESS, enable single step = ECR + stop after one command */
+  }
+
+  if (pulse & 040) {
+    /* 45 C0N, continue = CDF + ECR + data request turned on */
+    /* 47 BEG, begin = WDA + C0N */
   }
 
   return dat;
 }
 
-int32 graphics206 (int32 dev, int32 pulse, int32 dat)
+static int32 iot06 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7006%02o, %06o\n", pulse, dat);
 
+    /* 05 WDBC */
+    /* 12 LDB */
+    /* 25 WDBS */
+
   if (pulse & 001) {
-    if (g2_sense(ST340_STOPPED))
-      dat |= IOT_SKP;
-  }
-
-  if (pulse & 002) {
-    g2_set_dac (0);
-  }
-
-  if (pulse & 004) {
-    if ((pulse & 010) == 0)
-      g2_set_dac (dat & 07777);
-    g2_clear (ST340_STOPPED|ST340_STOP_INT);
-    sim_activate_abs (graphics2_unit, 0);
   }
 
   return dat;
 }
 
-int32 graphics207 (int32 dev, int32 pulse, int32 dat)
+static int32 iot07 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7007%02o, %06o\n", pulse, dat);
 
-  if (pulse & 001) {
-    if (g2_sense(ST340_LPHIT))
-      dat |= IOT_SKP;
-  }
-
-  if (pulse & 002) {
-    dat |= 0; // X, Y
-  }
-
-  if (pulse & 004) {
-    g2_clear(~0);
-  }
+  /* ELP 01 */
+  /* DLP 21 */
+  /* RLPE 22 */
+  /* RLPD 23 */
+  /* RAEF 42 */
 
   return dat;
 }
 
-int32 graphics210 (int32 dev, int32 pulse, int32 dat)
+static int32 iot10 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7010%02o, %06o\n", pulse, dat);
 
-  if (pulse & 001) {
-    if (g2_sense(ST340_HEDGE))
-      dat |= IOT_SKP;
-  }
+  /* 01 ECS, enable conditional stop */
+  /* 12 LDA, load display address */
+  /* 21 DCS, disable conditional stop */
+  /* 32 LPM, load parameter mode command */
+  /* 52 LDS, load display status */
 
-  if (pulse & 002) {
-    dat |= g2_get_asr();
-  }
+  return dat;
+}
 
-  if (pulse & 004) {
-    dat |= 0; // Light pen.
-  }
+static int32 iot14 (int32 dev, int32 pulse, int32 dat)
+{
+  sim_debug(DBG_IOT, &graphics2_dev, "7014%02o, %06o\n", pulse, dat);
+
+  /* 01 EIS, enable immediate stop */
+  /* 12 LX, load x. */
+
+  return dat;
+}
+
+static int32 iot34 (int32 dev, int32 pulse, int32 dat)
+{
+  sim_debug(DBG_IOT, &graphics2_dev, "7034%02o, %06o\n", pulse, dat);
+
+  /* 01 E0V, enable override */
+  /* 12 LY, load y. */
+  /* 21 D0V, disable override. */
+
+  return dat;
+}
+
+static int32 iot43 (int32 dev, int32 pulse, int32 dat)
+{
+  sim_debug(DBG_IOT, &graphics2_dev, "7043%02o, %06o\n", pulse, dat);
+
+  /* 01 SCK, skip on console keyboard */
+  /* 02 0CK, or console keyboard */
+  /* 04 CCK, clear console keboard. */
+  /* 12 LCK, load console keboard. */
+
+  return dat;
+}
+
+static int32 iot44 (int32 dev, int32 pulse, int32 dat)
+{
+  sim_debug(DBG_IOT, &graphics2_dev, "7044%02o, %06o\n", pulse, dat);
+
+  /* 01 SPB, skip push button */
+  /* 02 0PB, or push button */
+  /* 04 CPB, clear push button. */
+  /* 12 LPB, load push button. */
+  /* 24 WBL, write button lights. */
+  /* 32 LBL, load button lights. */
+
+  return dat;
+}
+
+static int32 iot45 (int32 dev, int32 pulse, int32 dat)
+{
+  sim_debug(DBG_IOT, &graphics2_dev, "7045%02o, %06o\n", pulse, dat);
+
+  /* 01 EIM, enable interrupt mask */
+  /* 12 LIM, load interrupt mask */
+  /* 21 DIM, disable interrupt mask, */
 
   return dat;
 }

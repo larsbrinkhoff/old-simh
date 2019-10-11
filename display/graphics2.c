@@ -64,19 +64,6 @@
 
 #include "display.h"                 /* XY plot interface */
 #include "graphics2.h"                 /* interface definitions */
-#include "type340cmd.h"              /* 340 command definitions */
-
-/*
- * sub-options, under "#if"
- * (make runtime selectable????!)
- * TYPE342      character generator
- * TYPE343      slave display control
- * TYPE347      subroutine facility
- */
-
-#ifndef TYPE342
-#define TYPE342 1                       /* default to character generation */
-#endif
 
 #define BITMASK(N) (1<<(17-(N)))
 
@@ -124,15 +111,6 @@ static struct graphics2 {
     unsigned char lp_ena;       /* 1 bit */
     unsigned char scale;        /* multiplier: 1,2,4,8 */
     unsigned char intensity;    /* 3 bits */
-#if TYPE342
-    unsigned char shift;        /* 1 bit */
-    unsigned char width;        /* character grid width */
-    unsigned char height;       /* character grid height */
-#endif
-#if TYPE347
-    g2word ASR;              /* Address Save Register */
-    unsigned char SAVE_FF;      /* "save" flip-flop */
-#endif
 } u340[G2_UNITS];
 
 #if G2_UNITS == 1
@@ -177,12 +155,7 @@ g2_get_dac(void)
 g2word
 g2_get_asr(void)
 {
-#if TYPE347
-    struct graphics2 *u = UNIT(0);
-    return u->ASR;
-#else
     return 0;
-#endif
 }
 
 g2word
@@ -213,14 +186,6 @@ gr2_reset(void *dptr)
     u->mode = PARAM;
     u->status = 0;
     u->scale = 1;
-#if TYPE342
-    u->shift = 0;
-    u->width = 6;
-    u->height = 11;
-#endif
-#if TYPE347
-    u->SAVE_FF = 0;
-#endif
     g2_rfd();                /* ready for data */
     return u->status;
 }
@@ -614,409 +579,39 @@ ipoint(int i, int n, unsigned char byte)
     return 0;                           /* no escape */
 }
 
-#if TYPE342
-/* 
- * 342 character generator - first 64 characters
- * 7-13_340_Display_Programming_Manual.pdf p.24
- * each char contains a vertical stripe of the matrix.
- * highest bit is top, lowest bit is unused (what was I drinking? -PLB)
- * first char is leftmost
- */
-static const unsigned char chars[128][6] = {
-    { 0070, 0124, 0154, 0124, 0070, 0 },   /* 00 blob */
-    { 0176, 0220, 0220, 0220, 0176, 0 },   /* 01 A */
-    { 0376, 0222, 0222, 0222, 0154, 0 },   /* 02 B */
-    { 0174, 0202, 0202, 0202, 0104, 0 },   /* 03 C */
-    { 0376, 0202, 0202, 0202, 0174, 0 },   /* 04 D */
-    { 0376, 0222, 0222, 0222, 0222, 0 },   /* 05 E */
-    { 0376, 0220, 0220, 0220, 0220, 0 },   /* 06 F */
-    { 0174, 0202, 0222, 0222, 0134, 0 },   /* 07 G */
-    { 0376, 0020, 0020, 0020, 0376, 0 },   /* 10 H */
-    { 0000, 0202, 0376, 0202, 0000, 0 },   /* 11 I */
-    { 0004, 0002, 0002, 0002, 0374, 0 },   /* 12 J */
-    { 0376, 0020, 0050, 0104, 0202, 0 },   /* 13 K */
-    { 0376, 0002, 0002, 0002, 0002, 0 },   /* 14 L */
-    { 0376, 0100, 0040, 0100, 0376, 0 },   /* 15 M */
-    { 0376, 0100, 0040, 0020, 0376, 0 },   /* 16 N */
-    { 0174, 0202, 0202, 0202, 0174, 0 },   /* 17 O */
-    { 0376, 0220, 0220, 0220, 0140, 0 },   /* 20 P */
-    { 0174, 0202, 0212, 0206, 0176, 0 },   /* 21 Q */
-    { 0376, 0220, 0230, 0224, 0142, 0 },   /* 22 R */
-    { 0144, 0222, 0222, 0222, 0114, 0 },   /* 23 S */
-    { 0200, 0200, 0376, 0200, 0200, 0 },   /* 24 T */
-    { 0374, 0002, 0002, 0002, 0374, 0 },   /* 25 U */
-    { 0370, 0004, 0002, 0004, 0370, 0 },   /* 26 V */
-    { 0376, 0004, 0010, 0004, 0376, 0 },   /* 27 W */
-    { 0202, 0104, 0070, 0104, 0202, 0 },   /* 30 X */
-    { 0200, 0100, 0076, 0100, 0200, 0 },   /* 31 Y */
-    { 0226, 0232, 0222, 0262, 0322, 0 },   /* 32 Z */
-    { 0000, 0000, 0000, 0000, 0000, CH_LF },   /* 33 LF */
-    { 0000, 0000, 0000, 0000, 0000, CH_CR },   /* 34 CR */
-    { 0000, 0000, 0000, 0000, 0000, CH_UC },   /* 35 HORIZ */
-    { 0000, 0000, 0000, 0000, 0000, CH_LC },   /* 36 VERT */
-    { 0000, 0000, 0000, 0000, 0000, CH_ESC },  /* 37 ESC */
-    { 0000, 0000, 0000, 0000, 0000, 0 },   /* 40 space */
-    { 0000, 0000, 0372, 0000, 0000, 0 },   /* 41 ! */
-    { 0000, 0340, 0000, 0340, 0000, 0 },   /* 42 " */
-    { 0050, 0376, 0050, 0376, 0050, 0 },   /* 43 # */
-    { 0144, 0222, 0376, 0222, 0114, 0 },   /* 44 $ */
-    { 0306, 0310, 0220, 0246, 0306, 0 },   /* 45 % */
-    { 0154, 0222, 0156, 0004, 0012, 0 },   /* 46 & */
-    { 0000, 0000, 0300, 0340, 0000, 0 },   /* 47 ' */
-    { 0000, 0070, 0104, 0202, 0000, 0 },   /* 50 ( Source: AI film 104 */
-    { 0000, 0202, 0104, 0070, 0000, 0 },   /* 51 ) Source: AI film 104 */
-    { 0104, 0050, 0174, 0050, 0104, 0 },   /* 52 * Source: AI film */
-    { 0020, 0020, 0174, 0020, 0020, 0 },   /* 53 + */
-    { 0000, 0032, 0034, 0000, 0000, 0 },   /* 54 , Source: AI film 104 */
-    { 0020, 0020, 0020, 0020, 0020, 0 },   /* 55 - */
-    { 0000, 0006, 0006, 0000, 0000, 0 },   /* 56 . */
-    { 0004, 0010, 0020, 0040, 0100, 0 },   /* 57 / */
-    { 0174, 0212, 0222, 0242, 0174, 0 },   /* 60 0 */
-    { 0000, 0102, 0376, 0002, 0000, 0 },   /* 61 1 */
-    { 0116, 0222, 0222, 0222, 0142, 0 },   /* 62 2 */
-    { 0104, 0202, 0222, 0222, 0154, 0 },   /* 63 3 */
-    { 0020, 0060, 0120, 0376, 0020, 0 },   /* 64 4 */
-    { 0344, 0222, 0222, 0222, 0214, 0 },   /* 65 5 */
-    { 0174, 0222, 0222, 0222, 0114, 0 },   /* 66 6 */
-    { 0306, 0210, 0220, 0240, 0300, 0 },   /* 67 7 */
-    { 0154, 0222, 0222, 0222, 0154, 0 },   /* 70 8 */
-    { 0144, 0222, 0222, 0222, 0174, 0 },   /* 71 9 */
-    { 0000, 0066, 0066, 0000, 0000, 0 },   /* 72 : */
-    { 0000, 0332, 0334, 0000, 0000, 0 },   /* 73 ; Source: consistent with , */
-    { 0020, 0050, 0104, 0202, 0000, 0 },   /* 74 < */
-    { 0050, 0050, 0050, 0050, 0050, 0 },   /* 75 = */
-    { 0000, 0202, 0104, 0050, 0020, 0 },   /* 76 > */
-    { 0100, 0200, 0236, 0220, 0140, 0 },   /* 77 ? */
 /*
- * NOT YET COMPLETE!!!
- * original letterforms not available, using
- * https://fontstruct.com/fontstructions/show/357807/5x7_monospaced_pixel_font
- * PLB: I wonder if VT52 was 5x7????
- *
- * Lars Brinkhoff: I added new shapes from AI lab film footage, and
- * from the Knight TV font.
- */
-    { 0070, 0124, 0154, 0124, 0070, 0 },   /* 00 blob */
-    { 0034, 0042, 0042, 0074, 0002, 0 },   /* 01 a Source: AI film 75 */
-    { 0376, 0042, 0042, 0042, 0034, 0 },   /* 02 b Source: AI film 75 */
-    { 0034, 0042, 0042, 0042, 0024, 0 },   /* 03 c */
-    { 0034, 0042, 0042, 0042, 0376, 0 },   /* 04 d Source: AI film 75 */
-    { 0034, 0052, 0052, 0052, 0030, 0 },   /* 05 e Source: AI film 75 */
-    { 0020, 0176, 0220, 0200, 0100, 0 },   /* 06 f Source: Knight TV */
-    { 0160, 0212, 0212, 0212, 0174, CH_D },/* 07 g Source: AI film 75 */
-    { 0376, 0040, 0040, 0040, 0036, 0 },   /* 10 h Source: AI film 75 */
-    { 0000, 0042, 0276, 0002, 0000, 0 },   /* 11 i Source: AI film 75 */
-    { 0000, 0004, 0042, 0274, 0000, 0 },   /* 12 j */
-    { 0376, 0010, 0030, 0044, 0002, 0 },   /* 13 k Source: AI film 75 */
-    { 0000, 0202, 0376, 0002, 0000, 0 },   /* 14 l Source: AI film 75 */
-    { 0076, 0040, 0036, 0040, 0036, 0 },   /* 15 m */
-    { 0076, 0020, 0040, 0040, 0036, 0 },   /* 16 n Source: AI film 75 */
-    { 0034, 0042, 0042, 0042, 0034, 0 },   /* 17 o Source: AI film 75 */
-    { 0376, 0210, 0210, 0210, 0160, CH_D },/* 20 p Source: Knight TV */
-    { 0160, 0210, 0210, 0210, 0376, CH_D },/* 21 q Source: Knight TV */
-    { 0076, 0020, 0040, 0040, 0020, 0 },   /* 22 r Source: AI film 75 */
-    { 0022, 0052, 0052, 0052, 0044, 0 },   /* 23 s */
-    { 0040, 0374, 0042, 0002, 0004, 0 },   /* 24 t Source: AI film 75 */
-    { 0074, 0002, 0002, 0004, 0076, 0 },   /* 25 u Source: AI film 75 */
-    { 0070, 0004, 0002, 0004, 0070, 0 },   /* 26 v Source: Knight TV */
-    { 0074, 0002, 0034, 0002, 0074, 0 },   /* 27 w Source: AI film 75 */
-    { 0042, 0024, 0010, 0024, 0042, 0 },   /* 30 x */
-    { 0360, 0012, 0012, 0012, 0374, CH_D },/* 31 y Source: AI film 75 */
-    { 0042, 0056, 0052, 0072, 0042, 0 },   /* 32 z Source: Knight TV */
-    { 0000, 0000, 0000, 0000, 0000, CH_LF },   /* 33 LF */
-    { 0000, 0000, 0000, 0000, 0000, CH_CR },   /* 34 CR */
-    { 0000, 0000, 0000, 0000, 0000, CH_UC },   /* 35 HORIZ */
-    { 0000, 0000, 0000, 0000, 0000, CH_LC },   /* 36 VERT */
-    { 0000, 0000, 0000, 0000, 0000, CH_ESC },  /* 37 ESC */
-    { 0000, 0000, 0000, 0000, 0000, 0 },   /* 40 space */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 41 ??? */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 42 ??? */
-    { 0100, 0200, 0100, 0040, 0100, 0 },   /* 43 ~ */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 44 ??? */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 45 ??? */
-    { 0040, 0100, 0376, 0100, 0040, 0 },   /* 46 up arrow */
-    { 0020, 0020, 0124, 0070, 0020, 0 },   /* 47 left arrow */
-    { 0010, 0004, 0376, 0004, 0010, 0 },   /* 50 down arrow */
-    { 0020, 0070, 0124, 0020, 0020, 0 },   /* 51 right arrow */
-    { 0100, 0040, 0020, 0010, 0004, 0 },   /* 52 \ */
-    { 0000, 0376, 0202, 0202, 0000, 0 },   /* 53 [ */
-    { 0000, 0202, 0202, 0376, 0000, 0 },   /* 54 ] */
-    { 0000, 0020, 0154, 0202, 0000, 0 },   /* 55 { */
-    { 0000, 0202, 0154, 0020, 0000, 0 },   /* 56 } */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 57 ??? */
-    { 0002, 0002, 0002, 0002, 0002, 0 },   /* 60 _ */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 61 ??? */
-    { 0000, 0000, 0376, 0000, 0000, 0 },   /* 62 | */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 63 ??? */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 64 ??? */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 65 ??? */
-    { 0000, 0200, 0100, 0040, 0000, CH_NSPC },  /* 66 ` */
-    { 0040, 0100, 0200, 0100, 0040, CH_NSPC },  /* 67 ^ */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 70 ??? */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 71 block? */
-    { 0000, 0000, 0000, 0000, 0000, CH_BS },  /* 72 backspace */
-    { 0376, 0376, 0376, 0376, 0376, CH_SUB }, /* 73 subscript */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 74 ??? */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 75 ??? */
-    { 0376, 0376, 0376, 0376, 0376, 0 },   /* 76 ??? */
-    { 0376, 0376, 0376, 0376, 0376, CH_SUP } /* 77 superscript */
-};
-
-/*
- * type 342 Character/Symbol generator for type 340 display
- * return true if ESCaped
- */
-static int
-character(int n, unsigned char c)
-{
-    struct graphics2 *u = UNIT(0);
-    int x, y;
-    unsigned char s = u->scale;
-    unsigned char flags;
-
-    c |= u->shift;
-    flags = chars[c][5];
-
-    if (flags == CH_LF) {               /* LF */
-        u->ypos -= u->height*s;
-        if (u->ypos < 0) {
-            u->status |= ST340_HEDGE;
-            u->ypos = 0;
-        }
-        return 0;
-    }
-    if (flags == CH_CR) {               /* CR */
-        u->xpos = 0;
-        return 0;
-    }
-    if (flags == CH_UC) {               /* "SHIFT IN (HORIZ)" */
-        u->shift = 0;                   /* upper case in SPCWAR 163 */
-        return 0;
-    }
-    if (flags == CH_LC) {               /* "SHIFT OUT (VERT)" */
-        u->shift = 0100;                /* lower case in SPCWAR 163 */
-        return 0;
-    }
-    if (flags == CH_ESC) {              /* escape */
-        return 1;
-    }
-    if ((flags == CH_NSPC) && u->xpos >= u->width*s) {
-        u->xpos -= u->width*s;          /* non spacing character */
-    }
-    if (flags == CH_D) {                /* descender */
-        u->ypos -= 2*s;
-    }
-    if (flags == CH_SUB) {              /* subscript */
-        u->ypos -= u->width*s/2;
-        return 0;
-    }
-    if (flags == CH_SUP) {              /* superscript */
-        u->ypos += u->width*s/2;
-        return 0;
-    }
-    /* plot character from character set selected by "shift" */
-    for (x = 0; x < 5; x++) {           /* column: 0 to 4, left to right */
-        for (y = 0; y < 7; y++) {       /* row: 0 to 6, bottom to top */
-            if (chars[c][x] & (2<<y)) {
-                /* XXX check for raster violation? */
-                point(u->xpos+x*s, u->ypos+y*s, n);
-            }
-        }
-    }
-    if (flags == CH_BS) {               /* backspace */
-        u->xpos -= u->width*s;
-    } else {
-        u->xpos += u->width*s;
-    }
-    if (flags == CH_D) {                /* undo descender */
-        u->ypos += 2*s;
-    }
-    if (u->xpos > 1023) {
-        u->xpos = 1023;
-        u->status |= ST340_VEDGE;
-    }
-    return 0;
-}
-#endif
-
-/*
- * execute one type340 instruction
+ * Execute one GRAPHICS-2 instruction.
  * returns status word
- * (could return number of microseconds)
  */
 g2word
 g2_instruction(g2word inst)
 {
     struct graphics2 *u = UNIT(0);
-    int i, escape;
-#ifdef TYPE347
-    g2word addr;
-#endif
 
-    /* cleared by RFD */
-    u->status &= ~(ST340_HEDGE|ST340_VEDGE);
-
-    DEBUGF(("graphics2 mode %#o status %#o\r\n", u->mode, u->status));
-    if (u->status & ST340_STOPPED)      /* XXX LPINT as well??? */
-        return u->status;
-
-    escape = 0;
-    switch (u->mode) {
-    case PARAM:
-        if (inst & 0600600) { /* curious to see if MIT hacked theirs */
-            DEBUGF(("graphics2 reserved param bits set %#o\r\n", inst));
-        }
-
-        /* READ TO MODE: */
-        u->mode = (enum mode)GETFIELD(inst, 2, 4);
-        if (TESTBIT(inst, 5)) {         /* load l.p. enable */
-            u->lp_ena = TESTBIT(inst,6);
-            DEBUGF(("graphics2 lp_ena %d\r\n", u->lp_ena));
-        }
-
-        /* PM PULSE: */
-        if (TESTBIT(inst, 14)) {
-            /* STORE INTENSITY: */
-            u->intensity = GETFIELD(inst, 15, 17);
-            DEBUGF(("graphics2 set intensity %d\r\n", u->intensity));
-        }
-        if (TESTBIT(inst, 11)) {
-            /* STORE SCALE: */
-            u->scale = 1<<GETFIELD(inst, 12, 13); /* save as multiplier */
-            DEBUGF(("graphics2 set scale %d\r\n", u->scale));
-        }
-        if (TESTBIT(inst, 7)) {
-            u->status |= ST340_STOPPED;
-            DEBUGF(("graphics2 stop\r\n"));
-            if (TESTBIT(inst, 8)) {
-                DEBUGF(("graphics2 stop int\r\n"));
-                u->status |= ST340_STOP_INT;
-            }
-        }
-        break;
-
-    case POINT:
-        u->mode = (enum mode)GETFIELD(inst, 2, 4);
-
-        if (TESTBIT(inst, 5)) {         /* load l.p. enable */
-            u->lp_ena = TESTBIT(inst,6);
-            DEBUGF(("graphics2 lp_ena %d\r\n", u->lp_ena));
-        }
-
-        if (TESTBIT(inst, 1)) {
-            u->ypos = GETFIELD(inst, 8, 17);
-            DEBUGF(("graphics2 set u->ypos %d\r\n", u->ypos));
-        }
-        else {
-            u->xpos = GETFIELD(inst, 8, 17);
-            DEBUGF(("graphics2 set xpos %d\r\n", u->xpos));
-        }
-        if (TESTBIT(inst, 7)) {         /* intensify */
-            DEBUGF(("graphics2 point (%d,%d)\r\n", u->ypos, u->xpos));
-            point(u->xpos, u->ypos, 0);
-        }
-        break;
-
-    case SLAVE:
-        DEBUGF(("graphics2 slave %06o\r\n", inst));
-        u->mode = (enum mode)GETFIELD(inst, 2, 4);
-#if TYPE343
-        /* control multiple windows???? */
-#else
-        /* ..set the mode register and halt without requesting a new data word */
-        u->status |= ST340_STOPPED;
-#endif
-        break;
-
-    case CHAR:
-        DEBUGF(("graphics2 char %06o\r\n", inst));
-#if TYPE342
-        escape = (character(0, GETFIELD(inst, 0, 5)) ||
-                  character(1, GETFIELD(inst, 6, 11)) ||
-                  character(2, GETFIELD(inst, 12, 17)));
-#else
-        /* what other missing options do: */
-        u->status |= ST340_STOPPED;
-#endif
-        break;
-
-    case VECTOR:
-        DEBUGF(("graphics2 vector %06o\r\n", inst));
-        escape = TESTBIT(inst, 0);
-        if (vector(TESTBIT(inst, 1),
-                   TESTBIT(inst, 2), GETFIELD(inst, 3, 9),
-                   TESTBIT(inst, 10), GETFIELD(inst, 11, 17))) {
-            /* XXX interrupt? */
-            escape = 1;
-        }
-        break;
-    case VCONT:
-        DEBUGF(("graphics2 vcont %06o\r\n", inst));
-        while (!vector(TESTBIT(inst, 1),
-                       TESTBIT(inst, 2), GETFIELD(inst, 3, 9),
-                       TESTBIT(inst, 10), GETFIELD(inst, 11, 17)))
-            ;
-        escape = 1;                     /* XXX always???? */
-        /* NOTE: NO INTERRUPT!! Clear conditions???? */
-        break;
-
-    case INCR:
-        DEBUGF(("graphics2 incr %06o\r\n", inst));
-        i = TESTBIT(inst, 1);           /* intensify bit */
-        if (ipoint(i, 0, GETFIELD(inst, 2, 5)) ||
-            ipoint(i, 1, GETFIELD(inst, 6, 9)) ||
-            ipoint(i, 2, GETFIELD(inst, 10, 13)) ||
-            ipoint(i, 3, GETFIELD(inst, 14, 17)))
-            escape = 1;
-        else if (TESTBIT(inst, 0))      /* escape bit */
-            escape = 1;
-        break;
-
-    case SUBR:
-        DEBUGF(("graphics2 subr %06o\r\n", inst));
-#if TYPE347
-        /* type 347 Display Subroutine Option? */
-
-        u->mode = (enum mode)GETFIELD(inst, 2, 4);
-        addr = GETFIELD(inst, 5, 17);
-
-        switch (GETFIELD(inst, 0, 1)) {
-        case DJS:                       /* display jump and save */
-            u->ASR = u->DAC;
-            u->SAVE_FF = 1;             /* set "save" flip-flop */
-            /* FALL */
-        case DJP:                       /* display jump */
-            u->DAC = addr;
-            break;
-        case DDS:                       /* display deposit save register */
-            g2_store(addr, (DJP<<16) | u->ASR);
-            /* clear SAVE_FF? */
-            break;
-        default:
-            /* XXX ??? */
-            break;
-        }
-#else  /* no 347 */
-        /* "halts without generating request for data or interrupt" */
-        u->status |= ST340_STOPPED;
-#endif
-        break;
+    switch ((inst & 0777777) >> 14) {
+    case 000: /* character */
+      break;
+    case 001: /* parameter */
+      break;
+    case 002: /* long vector */
+      break;
+    case 003: /* x-y */
+      break;
+    case 004: /* short vector */
+      break;
+    case 006: /* incremental */
+      break;
+    case 007: /* slave */
+      break;
+    case 010: case 011: case 012: case 013: /* trap */
+    case 014: case 015: case 016: case 017:
+      break;
     }
 
-    if (escape) {
-        u->mode = PARAM;
-#if TYPE347
-        if (u->SAVE_FF) {
-            /* return from subroutine */
-            u->DAC = u->ASR;
-            u->SAVE_FF = 0;
-        }
-#endif
-    }
     if (!(u->status & ST340_STOPPED))   /* XXX LPINT as well??? */
         g2_rfd();                    /* ready for data */
     return u->status;
-} /* g2_instruction */
+}
 
 g2word
 g2_status(void)
