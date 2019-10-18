@@ -250,6 +250,23 @@ static int32 iot43 (int32 dev, int32 pulse, int32 dat)
   /* 04 CCK, clear console keboard. */
   /* 12 LCK, load console keboard. */
 
+  if (pulse & 010) {
+    dat = 0;
+  }
+
+  if (pulse & 1) {
+    if (g2_sense (G2_KEY))
+      dat |= IOT_SKP;
+  }
+
+  if (pulse & 2) {
+      dat |= g2_key ();
+  }
+
+  if (pulse & 4) {
+      g2_clear_flags (G2_KEY);
+  }
+
   return dat;
 }
 
@@ -264,6 +281,10 @@ static int32 iot44 (int32 dev, int32 pulse, int32 dat)
   /* 24 WBL, write button lights. */
   /* 32 LBL, load button lights. */
 
+  if (pulse & 010) {
+    dat = 0;
+  }
+
   if (pulse & 1) {
     if (g2_sense (G2_BUT)) {
       dat |= IOT_SKP;
@@ -271,16 +292,10 @@ static int32 iot44 (int32 dev, int32 pulse, int32 dat)
   }
 
   if (pulse & 2) {
-    switch (pulse & 030) {
-    case 000:
-      break;
-    case 010:
-      dat |= g2_buttons ();
-      break;
-    case 030:
+    if (pulse & 020)
       dat |= g2_get_lights ();
-      break;
-    }
+    else      
+      dat |= g2_buttons ();
   }
 
   if (pulse & 4) {

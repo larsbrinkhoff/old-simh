@@ -159,6 +159,13 @@ g2_buttons(void)
 }
 
 g2word
+g2_key(void)
+{
+    struct graphics2 *u = UNIT(0);
+    return 0;
+}
+
+g2word
 g2_get_lights(void)
 {
     struct graphics2 *u = UNIT(0);

@@ -44,6 +44,7 @@ typedef unsigned int g2word;
 #define G2_EDGE   0200000
 #define G2_LP     0100000
 
+#define G2_KEY    0000200
 #define G2_BUT    0000100
 
 #define G2_DATA   0000004
@@ -61,6 +62,7 @@ g2word g2_instruction(g2word inst);
 g2word g2_get_address(void);
 g2word g2_sense(g2word);
 g2word g2_buttons(void);
+g2word g2_key(void);
 g2word g2_get_lights(void);
 g2word g2_get_flags(void);
 void g2_cycle(void);
