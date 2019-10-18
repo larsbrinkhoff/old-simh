@@ -49,6 +49,7 @@ static int32 iot07 (int32 dev, int32 pulse, int32 dat);
 static int32 iot10 (int32 dev, int32 pulse, int32 dat);
 static int32 iot14 (int32 dev, int32 pulse, int32 dat);
 static int32 iot34 (int32 dev, int32 pulse, int32 dat);
+static int32 iot42 (int32 dev, int32 pulse, int32 dat);
 static int32 iot43 (int32 dev, int32 pulse, int32 dat);
 static int32 iot44 (int32 dev, int32 pulse, int32 dat);
 static int32 iot45 (int32 dev, int32 pulse, int32 dat);
@@ -60,8 +61,8 @@ DIB graphics2_dib1 = { DEV_G2D1, 4, &graphics2_iors,
 		       { &iot05, &iot06, &iot07, &iot10 } };
 DIB graphics2_dib2 = { DEV_G2D3, 1, &graphics2_iors, { &iot14 } };
 DIB graphics2_dib3 = { DEV_G2D4, 1, &graphics2_iors, { &iot34 } };
-DIB graphics2_dib4 = { DEV_G2KB, 3, &graphics2_iors,
-		       { &iot43,  &iot44,  &iot45 } };
+DIB graphics2_dib4 = { DEV_G2UNK, 4, &graphics2_iors,
+		       { &iot42, &iot43,  &iot44,  &iot45 } };
 
 UNIT graphics2_unit[] = {
     { UDATA (&graphics2_svc, 0, 0) },
@@ -231,6 +232,13 @@ static int32 iot34 (int32 dev, int32 pulse, int32 dat)
   /* 21 D0V, disable override. */
 
   return dat;
+}
+
+static int32 iot42 (int32 dev, int32 pulse, int32 dat)
+{
+  sim_debug(DBG_IOT, &graphics2_dev, "7042%02o, %06o\n", pulse, dat);
+
+  /* 06 WCGA, unknown.  Unix passes 3072 in AC. */
 }
 
 static int32 iot43 (int32 dev, int32 pulse, int32 dat)
