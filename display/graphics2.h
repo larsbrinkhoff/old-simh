@@ -40,22 +40,34 @@ typedef unsigned int g2word;
 #define ST340_HEDGE     01000
 #define ST340_STOP_INT  00400
 
-/* NOT same as PDP-10 CONI */
-#define ST340_STOPPED   0400000
+#define G2_TRAP   0400000
+#define G2_EDGE   0200000
+#define G2_LP     0100000
+
+#define G2_BUT    0000100
+
+#define G2_DATA   0000004
+#define G2_STEP   0000002
+#define G2_RUN    0000001
+
+#define G2_DISPLAY_FLAGS (G2_TRAP|G2_EDGE|G2_LP|G2_DATA|G2_STEP|G2_RUN)
 
 /*
- * calls from host into type340.c
+ * Calls from host into graphics2.c
  */
 g2word gr2_reset(void *);
 g2word g2_status(void);
 g2word g2_instruction(g2word inst);
-g2word g2_get_dac(void);
-g2word g2_get_asr(void);
+g2word g2_get_address(void);
 g2word g2_sense(g2word);
-void g2_set_dac(g2word addr);
-void g2_clear(g2word addr);
+g2word g2_buttons(void);
+g2word g2_get_lights(void);
+g2word g2_get_flags(void);
 void g2_cycle(void);
-void g2_set_status(g2word);
+void g2_clear_flags(g2word);
+void g2_set_address(g2word addr);
+void g2_set_flags(g2word);
+void g2_set_lights(g2word);
 
 /*
  * calls from type340.c into host simulator

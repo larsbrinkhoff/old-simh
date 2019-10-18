@@ -128,29 +128,41 @@ int32 graphics2_iors (void)
 #endif
 }
 
+/* Used by Unix:
+
+cdf, lds, raef, rlpd, beg, lda,
+spb, cpb, lpb, wbl
+*/
+
 static int32 iot05 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7005%02o, %06o\n", pulse, dat);
 
   if (pulse & 001) {
     /* CDF, clear display flags */
+    g2_clear_flags (G2_DISPLAY_FLAGS);
   }
 
   if (pulse & 002) {
     /* WDA, write display address */
+    g2_set_address (dat);
   }
 
   if (pulse & 004) {
     /* ECR, enable continuous run */
+    g2_set_flags (G2_RUN);
   }
 
   if (pulse & 020) {
-    /* 24 ESS, enable single step = ECR + stop after one command */
+    /* 24 ESS, enable single step */
+    g2_set_flags (G2_STEP);
   }
 
   if (pulse & 040) {
-    /* 45 C0N, continue = CDF + ECR + data request turned on */
-    /* 47 BEG, begin = WDA + C0N */
+    /* data request turned on */
+    /* 45 C0N, continue */
+    /* 47 BEG, begin */
+    g2_set_flags (G2_DATA);
   }
 
   return dat;
@@ -160,12 +172,9 @@ static int32 iot06 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7006%02o, %06o\n", pulse, dat);
 
-    /* 05 WDBC */
-    /* 12 LDB */
-    /* 25 WDBS */
-
-  if (pulse & 001) {
-  }
+  /* 05 WDBC */
+  /* 12 LDB */
+  /* 25 WDBS */
 
   return dat;
 }
@@ -174,11 +183,11 @@ static int32 iot07 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7007%02o, %06o\n", pulse, dat);
 
-  /* ELP 01 */
-  /* DLP 21 */
-  /* RLPE 22 */
-  /* RLPD 23 */
-  /* RAEF 42 */
+  /* 01 ELP */
+  /* 21 DLP */
+  /* 22 RLPE */
+  /* 23 RLPD, return after light pen */
+  /* 42 RAEF, return after edge flag */
 
   return dat;
 }
@@ -192,6 +201,12 @@ static int32 iot10 (int32 dev, int32 pulse, int32 dat)
   /* 21 DCS, disable conditional stop */
   /* 32 LPM, load parameter mode command */
   /* 52 LDS, load display status */
+
+  if (pulse == 012) {
+    dat |= g2_get_address ();
+  } else if (pulse == 052) {
+    dat |= g2_get_flags ();
+  }
 
   return dat;
 }
@@ -239,6 +254,32 @@ static int32 iot44 (int32 dev, int32 pulse, int32 dat)
   /* 12 LPB, load push button. */
   /* 24 WBL, write button lights. */
   /* 32 LBL, load button lights. */
+
+  if (pulse & 1) {
+    if (g2_sense (G2_BUT)) {
+      dat |= IOT_SKP;
+    }
+  }
+
+  if (pulse & 2) {
+    switch (pulse & 030) {
+    case 000:
+      break;
+    case 010:
+      dat |= g2_buttons ();
+      break;
+    case 030:
+      dat |= g2_get_lights ();
+      break;
+    }
+  }
+
+  if (pulse & 4) {
+    if (pulse & 020)
+      g2_set_lights (dat);
+    else
+      g2_clear_flags (G2_BUT);
+  }
 
   return dat;
 }

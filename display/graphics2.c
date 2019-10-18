@@ -119,9 +119,8 @@ static struct graphics2 {
 #define UNIT(N) (u340+(N))
 #endif
 
-/* NOT USED WITH PDP-6 Type 344 Interface!! */
 void
-g2_set_dac(g2word addr)
+g2_set_address(g2word addr)
 {
     struct graphics2 *u = UNIT(0);
     u->DAC = addr;
@@ -138,7 +137,7 @@ g2_cycle(void)
 {
     struct graphics2 *u = UNIT(0);
 
-    if (u->status == 0) {
+    if (u->status & G2_RUN) {
         g2word insn = g2_fetch(u->DAC);
         u->status = g2_instruction (insn);
         u->DAC = (u->DAC + 1) & 07777;
@@ -146,16 +145,30 @@ g2_cycle(void)
 }
 
 g2word
-g2_get_dac(void)
+g2_get_address(void)
 {
     struct graphics2 *u = UNIT(0);
     return u->DAC;
 }
 
 g2word
-g2_get_asr(void)
+g2_buttons(void)
 {
+    struct graphics2 *u = UNIT(0);
     return 0;
+}
+
+g2word
+g2_get_lights(void)
+{
+    struct graphics2 *u = UNIT(0);
+    return 0;
+}
+
+void
+g2_set_lights(g2word x)
+{
+    struct graphics2 *u = UNIT(0);
 }
 
 g2word
@@ -166,10 +179,17 @@ g2_sense(g2word flags)
 }
 
 void
-g2_clear(g2word flags)
+g2_clear_flags(g2word flags)
 {
     struct graphics2 *u = UNIT(0);
     u->status &= ~flags;
+}
+
+void
+g2_set_flags(g2word flags)
+{
+    struct graphics2 *u = UNIT(0);
+    u->status |= flags;
 }
 
 g2word
@@ -206,12 +226,12 @@ point(int x, int y, int seq)
 
     if (x < 0 || x > 1023) {
         /* XXX clip? wrap?? */
-        u->status |= ST340_VEDGE;
+        u->status |= G2_EDGE;
         return 0;
     }
     if (y < 0 || y > 1023) {
         /* XXX clip? wrap?? */
-        u->status |= ST340_HEDGE;
+        u->status |= G2_EDGE;
         return 0;
     }
 
@@ -221,7 +241,7 @@ point(int x, int y, int seq)
          * in real life: type340 pauses
          * until CPU reads coordinates
          */
-        u->status |= ST340_LPHIT;
+        u->status |= G2_LP;
         if (u->lp_ena)
             g2_lp_int(x, y);
     }
@@ -488,14 +508,14 @@ vector(int i, int sy, int dy, int sx, int dx)
         x1 = x0 - dx * u->scale;
         if (x1 < 0) {
             x1 = 0;
-            flags = ST340_HEDGE;
+            flags = G2_EDGE;
         }
     }
     else {
         x1 = x0 + dx * u->scale;
         if (x1 > 1023) {
             x1 = 1023;
-            flags = ST340_HEDGE;
+            flags = G2_EDGE;
         }
     }
 
@@ -503,14 +523,14 @@ vector(int i, int sy, int dy, int sx, int dx)
         y1 = y0 - dy * u->scale;
         if (y1 < 0) {
             y1 = 0;
-            flags |= ST340_VEDGE;
+            flags |= G2_EDGE;
         }
     }
     else {
         y1 = y0 + dy * u->scale;
         if (y1 > 1023) {
             y1 = 1023;
-            flags |= ST340_VEDGE;
+            flags |= G2_EDGE;
         }
     }
 
@@ -542,7 +562,7 @@ ipoint(int i, int n, unsigned char byte)
             u->xpos -= u->scale;
             if (u->xpos < 0) {
                 u->xpos = 0;            /* XXX wrap? */
-                u->status |= ST340_VEDGE; /* save flags & continue?? */
+                u->status |= G2_EDGE; /* save flags & continue?? */
                 return 1;               /* escape */
             }
         }
@@ -550,7 +570,7 @@ ipoint(int i, int n, unsigned char byte)
             u->xpos += u->scale;
             if (u->xpos > 1023) {
                 u->xpos = 1023;         /* XXX wrap? */
-                u->status |= ST340_VEDGE;
+                u->status |= G2_EDGE;
                 return 1;
             }
         }
@@ -560,7 +580,7 @@ ipoint(int i, int n, unsigned char byte)
             u->ypos -= u->scale;
             if (u->ypos < 0) {
                 u->ypos = 0;            /* XXX wrap? */
-                u->status |= ST340_HEDGE;
+                u->status |= G2_EDGE;
                 return 1;
             }
         }
@@ -568,7 +588,7 @@ ipoint(int i, int n, unsigned char byte)
             u->ypos += u->scale;
             if (u->ypos > 1023) {
                 u->ypos = 1023;         /* XXX wrap? */
-                u->status |= ST340_HEDGE;
+                u->status |= G2_EDGE;
                 return 1;
             }
         }
@@ -608,14 +628,14 @@ g2_instruction(g2word inst)
       break;
     }
 
-    if (!(u->status & ST340_STOPPED))   /* XXX LPINT as well??? */
+    if (u->status & G2_RUN)
         g2_rfd();                    /* ready for data */
     return u->status;
 }
 
 g2word
-g2_status(void)
+g2_get_flags(void)
 {
     struct graphics2 *u = UNIT(0);
-    return u->status;
+    return u->status & (G2_TRAP|G2_EDGE|G2_LP);
 }
