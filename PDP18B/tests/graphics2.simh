@@ -5,23 +5,28 @@ set graphics2 enabled
 set graphics2 debug
 
 # Small test program.
-dep -m 100 law 1000
-#dep -m 101 idla
-#dep -m 102 idsi
-dep -m 103 jmp 102
-dep -m 104 jmp 100
+# CDF
+dep -m 100 700501
+dep -m 101 law 1000
+# BEG
+dep -m 102 700547
+# LDS
+dep -m 103 701052
+dep -m 104 sma ral
+dep -m 105 jmp 104
+dep -m 106 jmp 101
 
 # Small display list.
-#Go to point mode, set scale, set intensity.
-dep 1000 020117
-#Stay in point mode, set x=1000.
-dep 1001 021000
-#Go to vector mode, set y=1000.
-dep 1002 301000
-#Escape, intensify, delta x=100.
-dep 1003 600100
-#Stop.
-dep 1004 003000
+# Parameter: clear blink, clear pen, scale 1, intensity 3.
+dep 1000 0065057
+# Set Y=992, invisible, no delay.
+dep 1001 0147740
+# Set X=0, invisible, settle.
+dep 1002 0160000
+# Character, A.
+dep 1003 20200
+# Trap.
+dep 1004 0400000
 
 dep pc 100
 # Ready to go or single step.

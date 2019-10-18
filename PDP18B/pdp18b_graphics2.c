@@ -132,6 +132,7 @@ int32 graphics2_iors (void)
 
 cdf, lds, raef, rlpd, beg, lda,
 spb, cpb, lpb, wbl
+sck, cck, lck
 */
 
 static int32 iot05 (int32 dev, int32 pulse, int32 dat)
