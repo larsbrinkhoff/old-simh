@@ -27,8 +27,11 @@ dep 1002 0160000
 dep 1003 20200
 # Short vector.
 dep 1004 223010
+# Long vector.
+dep 1005 100100
+dep 1006 136400
 # Trap.
-dep 1005 0400000
+dep 1007 0400000
 
 dep pc 100
 # Ready to go or single step.

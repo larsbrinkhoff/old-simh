@@ -106,12 +106,14 @@ static struct graphics2 {
     g2word DAC;              /* Display Address Counter */
     g2word status;           /* see ST340_XXX in type340.h */
     signed short xpos, ypos;    /* 10 bits, signed (for OOB checks) */
+    unsigned short xhold, yhold; /* 11 bits */
     char initialized;           /* 0 before display_init */
     /* only using (evil) bitfield syntax to limit enum size */
     enum mode mode : 8;         /* 3 bits */
     unsigned char lp_ena;       /* 1 bit */
     unsigned char scale;        /* multiplier: 1,2,4,8 */
-    unsigned char intensity;    /* 3 bits */
+    unsigned char intensity;    /* 2 bits */
+    unsigned char blink;        /* 1 bit */
 } u340[G2_UNITS];
 
 #if G2_UNITS == 1
@@ -217,6 +219,7 @@ gr2_reset(void *dptr)
     }
 #endif
     u->xpos = u->ypos = 0;
+    u->xhold = u->yhold = 0;
     u->mode = PARAM;
     u->status = 0;
     u->scale = 1;
@@ -234,7 +237,7 @@ point(int x, int y, int seq)
     DEBUGF(("type340 point %d %d %d\r\n", x, y, seq));
 #endif
 
-    i = DISPLAY_INT_MAX-7+u->intensity;
+    i = DISPLAY_INT_MAX-3+u->intensity;
     if (i <= 0)
         i = 1;
 
@@ -621,16 +624,47 @@ g2word
 g2_instruction(g2word inst)
 {
     struct graphics2 *u = UNIT(0);
+    signed short val;
 
     switch ((inst & 0777777) >> 14) {
     case 000: /* character */
-      DEBUGF(("GRAPHICS-2: character %06o\n", inst));
+      DEBUGF(("GRAPHICS-2: character %03o %03o\n",
+              (inst >> 7) & 0177, inst & 0177));
       break;
     case 001: /* parameter */
       DEBUGF(("GRAPHICS-2: parameter %06o\n", inst));
+      if (inst & 0020000)
+        u->blink = (inst >> 13) & 1;
+      if (inst & 0004000)
+        u->lp_ena = (inst >> 11) & 1;
+      /* TODO: more bits here */
+      if (inst & 040)
+        u->scale = 1 << ((inst & 030) >> 3);
+      if (inst & 4)
+        u->intensity = inst & 3;
       break;
     case 002: /* long vector */
       DEBUGF(("GRAPHICS-2: long vector %06o\n", inst));
+      val = inst & 03777;
+      if (inst & 04000)
+        u->yhold = val;
+      else
+        u->xhold = val;
+      switch ((inst >> 12) & 3) {
+      case 0:
+        break;
+      case 1:
+        vector(0, u->yhold & 02000, u->yhold & 01777,
+               u->xhold & 02000, u->xhold & 01777);
+        u->xhold = u->yhold = 0;
+        break;
+      case 2:
+      case 3:
+        vector(1, u->yhold & 02000, u->yhold & 01777,
+               u->xhold & 02000, u->xhold & 01777);
+        u->xhold = u->yhold = 0;
+        break;
+      }
       break;
     case 003: /* x-y */
       DEBUGF(("GRAPHICS-2: point %06o\n", inst));
