@@ -76,6 +76,7 @@
 /* extract a 1-bit field */
 #define TESTBIT(W,B) (((W) & BITMASK(B)) != 0)
 
+#define DEBUG_G2
 #ifdef DEBUG_G2
 #include <stdio.h>
 #define DEBUGF(X) printf X
@@ -123,12 +124,9 @@ void
 g2_set_address(g2word addr)
 {
     struct graphics2 *u = UNIT(0);
-    u->DAC = addr;
+    u->DAC = addr & 07777;
     DEBUGF(("set DAC %06o\r\n", u->DAC));
 
-    /* XXX only when reset? */
-    u->mode = PARAM;
-    u->status = 0;               /* XXX just clear stopped? */
     g2_rfd();                 /* ready for data */
 }
 
@@ -148,6 +146,7 @@ g2word
 g2_get_address(void)
 {
     struct graphics2 *u = UNIT(0);
+    DEBUGF(("GRAPHICS-2: get address %06o\n", u->DAC));
     return u->DAC;
 }
 
@@ -155,6 +154,7 @@ g2word
 g2_buttons(void)
 {
     struct graphics2 *u = UNIT(0);
+    DEBUGF(("GRAPHICS-2: get buttons %06o\n", 0));
     return 0;
 }
 
@@ -162,6 +162,7 @@ g2word
 g2_key(void)
 {
     struct graphics2 *u = UNIT(0);
+    DEBUGF(("GRAPHICS-2: get key %06o\n", 0));
     return 0;
 }
 
@@ -169,6 +170,7 @@ g2word
 g2_get_lights(void)
 {
     struct graphics2 *u = UNIT(0);
+    DEBUGF(("GRAPHICS-2: get lights %06o\n", 0));
     return 0;
 }
 
@@ -176,12 +178,14 @@ void
 g2_set_lights(g2word x)
 {
     struct graphics2 *u = UNIT(0);
+    DEBUGF(("GRAPHICS-2: set lights %06o\n", x));
 }
 
 g2word
 g2_sense(g2word flags)
 {
     struct graphics2 *u = UNIT(0);
+    DEBUGF(("GRAPHICS-2: sense %06o\n", flags));
     return u->status & flags;
 }
 
@@ -189,6 +193,7 @@ void
 g2_clear_flags(g2word flags)
 {
     struct graphics2 *u = UNIT(0);
+    DEBUGF(("GRAPHICS-2: clear flags %06o\n", flags));
     u->status &= ~flags;
 }
 
@@ -196,6 +201,7 @@ void
 g2_set_flags(g2word flags)
 {
     struct graphics2 *u = UNIT(0);
+    DEBUGF(("GRAPHICS-2: set flags %06o\n", flags));
     u->status |= flags;
 }
 
@@ -203,6 +209,7 @@ g2word
 gr2_reset(void *dptr)
 {
     struct graphics2 *u = UNIT(0);
+    DEBUGF(("GRAPHICS-2: reset\n"));
 #ifndef G2_NODISPLAY
     if (!u->initialized) {
         display_init(DIS_GRAPHICS2, 1, dptr); /* XXX check return? */
@@ -617,26 +624,40 @@ g2_instruction(g2word inst)
 
     switch ((inst & 0777777) >> 14) {
     case 000: /* character */
+      DEBUGF(("GRAPHICS-2: character %06o\n", inst));
       break;
     case 001: /* parameter */
+      DEBUGF(("GRAPHICS-2: parameter %06o\n", inst));
       break;
     case 002: /* long vector */
+      DEBUGF(("GRAPHICS-2: long vector %06o\n", inst));
       break;
     case 003: /* x-y */
+      DEBUGF(("GRAPHICS-2: point %06o\n", inst));
       break;
     case 004: /* short vector */
+      DEBUGF(("GRAPHICS-2: short vector %06o\n", inst));
       break;
     case 006: /* incremental */
+      DEBUGF(("GRAPHICS-2: incremental %06o\n", inst));
       break;
     case 007: /* slave */
+      DEBUGF(("GRAPHICS-2: slave %06o\n", inst));
       break;
     case 010: case 011: case 012: case 013: /* trap */
     case 014: case 015: case 016: case 017:
+      DEBUGF(("GRAPHICS-2: trap %06o\n", inst));
+      u->status &= ~G2_RUN;
+      u->status |= G2_TRAP;
       break;
     }
 
+    if (u->status & G2_STEP)
+      u->status &= ~G2_RUN;
+
     if (u->status & G2_RUN)
         g2_rfd();                    /* ready for data */
+
     return u->status;
 }
 
@@ -644,5 +665,6 @@ g2word
 g2_get_flags(void)
 {
     struct graphics2 *u = UNIT(0);
+    DEBUGF(("GRAPHICS-2: get flags %06o\n", u->status & (G2_TRAP|G2_EDGE|G2_LP)));
     return u->status & (G2_TRAP|G2_EDGE|G2_LP);
 }

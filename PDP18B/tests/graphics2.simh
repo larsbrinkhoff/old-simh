@@ -6,14 +6,14 @@ set graphics2 debug
 
 # Small test program.
 # CDF
-dep -m 100 700501
+dep -m 100 iot 0501
 dep -m 101 law 1000
 # BEG
-dep -m 102 700547
+dep -m 102 iot 0547
 # LDS
-dep -m 103 701052
+dep -m 103 iot 1052
 dep -m 104 sma ral
-dep -m 105 jmp 104
+dep -m 105 jmp 103
 dep -m 106 jmp 101
 
 # Small display list.

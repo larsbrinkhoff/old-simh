@@ -153,6 +153,7 @@ static int32 iot05 (int32 dev, int32 pulse, int32 dat)
   if (pulse & 004) {
     /* ECR, enable continuous run */
     g2_set_flags (G2_RUN);
+    sim_activate_abs (graphics2_unit, 0);
   }
 
   if (pulse & 020) {
@@ -204,10 +205,13 @@ static int32 iot10 (int32 dev, int32 pulse, int32 dat)
   /* 32 LPM, load parameter mode command */
   /* 52 LDS, load display status */
 
-  if (pulse == 012) {
-    dat |= g2_get_address ();
-  } else if (pulse == 052) {
-    dat |= g2_get_flags ();
+  switch (pulse) {
+  case 002:
+    dat = g2_get_address ();
+    break;
+  case 042:
+    dat = g2_get_flags ();
+    break;
   }
 
   return dat;
@@ -250,10 +254,6 @@ static int32 iot43 (int32 dev, int32 pulse, int32 dat)
   /* 04 CCK, clear console keboard. */
   /* 12 LCK, load console keboard. */
 
-  if (pulse & 010) {
-    dat = 0;
-  }
-
   if (pulse & 1) {
     if (g2_sense (G2_KEY))
       dat |= IOT_SKP;
@@ -280,10 +280,6 @@ static int32 iot44 (int32 dev, int32 pulse, int32 dat)
   /* 12 LPB, load push button. */
   /* 24 WBL, write button lights. */
   /* 32 LBL, load button lights. */
-
-  if (pulse & 010) {
-    dat = 0;
-  }
 
   if (pulse & 1) {
     if (g2_sense (G2_BUT)) {
