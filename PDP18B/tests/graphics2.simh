@@ -1,20 +1,39 @@
+set g2in disabled
 set g2out disabled
+set ttix disabled
+set ttox disabled
 
 set debug stdout
 set graphics2 enabled
+set graphics2b enabled
+set graphics2c enabled
+set graphics2d enabled
 set graphics2 debug
+set graphics2b debug
+set graphics2c debug
+set graphics2d debug
 
 # Small test program.
 # CDF
 dep -m 100 iot 0501
-dep -m 101 law 1000
+dep -m 101 law 6000
+# WCGA
+dep -m 102 iot 4206
+dep -m 103 law 1000
 # BEG
-dep -m 102 iot 0547
+dep -m 104 iot 0547
 # LDS
-dep -m 103 iot 1052
-dep -m 104 sma ral
-dep -m 105 jmp 103
-dep -m 106 jmp 101
+dep -m 105 iot 1052
+dep -m 106 spa
+dep -m 107 jmp 101
+# SCK
+dep -m 110 iot 4301
+dep -m 111 jmp 105
+# CCK
+dep -m 112 iot 4304
+# LCK
+dep -m 113 iot 4312
+dep -m 114 jmp 105
 
 # Small display list.
 # Parameter: clear blink, clear pen, scale 1, intensity 3.

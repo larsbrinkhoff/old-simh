@@ -138,6 +138,7 @@ g2_cycle(void)
     struct graphics2 *u = UNIT(0);
 
     if (u->status & G2_RUN) {
+        DEBUGF(("GRAPHICS-2: address %06o\n", u->DAC));
         g2word insn = g2_fetch(u->DAC);
         u->status = g2_instruction (insn);
         u->DAC = (u->DAC + 1) & 07777;
@@ -187,7 +188,7 @@ g2word
 g2_sense(g2word flags)
 {
     struct graphics2 *u = UNIT(0);
-    DEBUGF(("GRAPHICS-2: sense %06o\n", flags));
+    DEBUGF(("GRAPHICS-2: sense %06o from %06o\n", flags, u->status));
     return u->status & flags;
 }
 

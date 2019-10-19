@@ -84,6 +84,33 @@ DEVICE graphics2_dev = {
     graphics2_deb, NULL, NULL
     };
 
+DEVICE graphics2b_dev = {
+    "GRAPHICS2B", NULL, NULL, NULL,
+    0, 8, 24, 1, 8, 18,
+    NULL, NULL, &graphics2_reset,
+    NULL, NULL, NULL,
+    &graphics2_dib2, DEV_DISABLE | DEV_DIS | DEV_DEBUG, 0,
+    graphics2_deb, NULL, NULL
+    };
+
+DEVICE graphics2c_dev = {
+    "GRAPHICS2C", NULL, NULL, NULL,
+    0, 8, 24, 1, 8, 18,
+    NULL, NULL, &graphics2_reset,
+    NULL, NULL, NULL,
+    &graphics2_dib3, DEV_DISABLE | DEV_DIS | DEV_DEBUG, 0,
+    graphics2_deb, NULL, NULL
+    };
+
+DEVICE graphics2d_dev = {
+    "GRAPHICS2D", NULL, NULL, NULL,
+    0, 8, 24, 1, 8, 18,
+    NULL, NULL, &graphics2_reset,
+    NULL, NULL, NULL,
+    &graphics2_dib4, DEV_DISABLE | DEV_DIS | DEV_DEBUG, 0,
+    graphics2_deb, NULL, NULL
+    };
+
 t_stat graphics2_svc (UNIT *uptr)
 {
   extern int32 *M;
