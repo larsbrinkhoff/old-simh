@@ -43,11 +43,14 @@ typedef unsigned int g2word;
 #define G2_TRAP   0400000
 #define G2_EDGE   0200000
 #define G2_LP     0100000
-
-#define G2_KEY    0000200
-#define G2_BUT    0000100
-
-#define G2_DATA   0000004
+#define G2_STOP   0040000
+#define G2_COND   0020000
+#define G2_BUT    0010000
+#define G2_KEY    0004000
+#define G2_PHONE  0002000
+#define G2_BYTE   0001000
+#define G2_DATA   0000040
+/* TODO: fix all flags */
 #define G2_STEP   0000002
 #define G2_RUN    0000001
 
