@@ -25,8 +25,10 @@ dep 1001 0147740
 dep 1002 0160000
 # Character, A.
 dep 1003 20200
+# Short vector.
+dep 1004 223010
 # Trap.
-dep 1004 0400000
+dep 1005 0400000
 
 dep pc 100
 # Ready to go or single step.

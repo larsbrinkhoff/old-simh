@@ -634,9 +634,14 @@ g2_instruction(g2word inst)
       break;
     case 003: /* x-y */
       DEBUGF(("GRAPHICS-2: point %06o\n", inst));
+      if (inst & 04000)
+        u->ypos = inst & 01777;
+      else
+        u->xpos = inst & 01777;
       break;
     case 004: /* short vector */
       DEBUGF(("GRAPHICS-2: short vector %06o\n", inst));
+      vector(1, inst & 040, inst & 037, inst & 04000, (inst >> 6) & 037);
       break;
     case 006: /* incremental */
       DEBUGF(("GRAPHICS-2: incremental %06o\n", inst));
