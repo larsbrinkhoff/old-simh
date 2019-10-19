@@ -126,7 +126,7 @@ void
 g2_set_address(g2word addr)
 {
     struct graphics2 *u = UNIT(0);
-    u->DAC = addr & 07777;
+    u->DAC = addr & 017777;
     DEBUGF(("set DAC %06o\r\n", u->DAC));
 
     g2_rfd();                 /* ready for data */
