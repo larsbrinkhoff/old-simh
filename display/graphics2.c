@@ -569,37 +569,57 @@ ipoint(int byte)
     static int ytab[] = { 1, 1, 0, -1, -1, -1, 0, 1 };
     struct graphics2 *u = UNIT(0);
     int dx, dy;
-    int n;
+    int n, i;
 
     n = (byte >> 4) & 7;
-    dx = xtab[byte & 7] * u->scale * n;
-    dy = ytab[byte & 7] * u->scale * n;
+    dx = xtab[byte & 7] * u->scale;
+    dy = ytab[byte & 7] * u->scale;
         
-    u->xpos += dx;
-    u->ypos += dy;
-    if (u->xpos < 0) {
-      u->xpos = 0;
-      u->status |= G2_EDGE;
-    } else if (u->xpos > 1023) {
-      u->xpos = 1023;
-      u->status |= G2_EDGE;
-    }
+    DEBUGF(("G-2 incremental %03o: %d %d %d %svisible\n", byte, n, dx, dy, (byte & 010) ? "" : "in"));
 
-    if (u->ypos < 0) {
-      u->ypos = 0;
-      u->status |= G2_EDGE;
-    } else if (u->ypos > 1023) {
-      u->ypos = 1023;
-      u->status |= G2_EDGE;
-    }
+    for (i = 0; i <= n; i++) {
+      u->xpos += dx;
+      u->ypos += dy;
+      if (u->xpos < 0) {
+        u->xpos = 0;
+        u->status |= G2_EDGE;
+      } else if (u->xpos > 1023) {
+        u->xpos = 1023;
+        u->status |= G2_EDGE;
+      }
 
-    if (byte & 010)
+      if (u->ypos < 0) {
+        u->ypos = 0;
+        u->status |= G2_EDGE;
+      } else if (u->ypos > 1023) {
+        u->ypos = 1023;
+        u->status |= G2_EDGE;
+      }
+
+      if (byte & 010)
         point(u->xpos, u->ypos, 1);
+    }
 
     return 0;
 }
 
 #include "g2chars.c"
+
+static void
+g2char (int c)
+{
+  int i;
+  DEBUGF(("G-2 character '%c'\n", c));
+  for (i = 0; i < 16; i++) {
+    g2word x = chargen[c-040][i];
+    if (x == 0)
+      break;
+    ipoint ((x >> 12) & 077);
+    ipoint ((x >>  6) & 077);
+    ipoint ((x >>  0) & 077);
+  }
+}
+
 
 /*
  * Execute one GRAPHICS-2 instruction.
@@ -615,6 +635,8 @@ g2_instruction(g2word inst)
     case 000: /* character */
       DEBUGF(("GRAPHICS-2: character %03o %03o\n",
               (inst >> 7) & 0177, inst & 0177));
+      g2char ((inst >> 7) & 0177);
+      g2char (inst & 0177);
       break;
     case 001: /* parameter */
       DEBUGF(("GRAPHICS-2: parameter %06o\n", inst));

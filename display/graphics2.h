@@ -31,15 +31,6 @@
 
 typedef unsigned int g2word;
 
-/*
- * Type340 status bits
- * MUST BE EXACT SAME VALUES AS USED IN PDP-10 CONI!!!
- */
-#define ST340_VEDGE     04000
-#define ST340_LPHIT     02000
-#define ST340_HEDGE     01000
-#define ST340_STOP_INT  00400
-
 #define G2_TRAP   0400000
 #define G2_EDGE   0200000
 #define G2_LP     0100000
