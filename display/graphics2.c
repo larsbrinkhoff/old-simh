@@ -140,8 +140,8 @@ g2_cycle(void)
     if (u->status & G2_RUN) {
         DEBUGF(("GRAPHICS-2: address %06o\n", u->DAC));
         g2word insn = g2_fetch(u->DAC);
-        u->status = g2_instruction (insn);
-        u->DAC = (u->DAC + 1) & 07777;
+        g2_instruction (insn);
+        u->DAC = (u->DAC + 1) & 017777;
     }
 }
 
@@ -562,60 +562,44 @@ vector(int i, int sy, int dy, int sx, int dx)
     return flags;
 }
 
-/*
- * incremental vector
- * return true on raster violation
- *
- * i is intensify
- * n is subvector number
- * byte is 4 bits
- */
 static int
-ipoint(int i, int n, unsigned char byte)
+ipoint(int byte)
 {
+    static int xtab[] = { 0, 1, 1, 1, 0, -1, -1, -1 };
+    static int ytab[] = { 1, 1, 0, -1, -1, -1, 0, 1 };
     struct graphics2 *u = UNIT(0);
-    DEBUGF(("graphics2 ipoint i%d n%d %#o\r\n", i, n, byte));
-    if (byte & 010) {                   /* left/right */
-        if (byte & 04) {                /* left */
-            u->xpos -= u->scale;
-            if (u->xpos < 0) {
-                u->xpos = 0;            /* XXX wrap? */
-                u->status |= G2_EDGE; /* save flags & continue?? */
-                return 1;               /* escape */
-            }
-        }
-        else {                          /* right */
-            u->xpos += u->scale;
-            if (u->xpos > 1023) {
-                u->xpos = 1023;         /* XXX wrap? */
-                u->status |= G2_EDGE;
-                return 1;
-            }
-        }
-    }
-    if (byte & 02) {                    /* up/down */
-        if (byte & 01) {                /* down */
-            u->ypos -= u->scale;
-            if (u->ypos < 0) {
-                u->ypos = 0;            /* XXX wrap? */
-                u->status |= G2_EDGE;
-                return 1;
-            }
-        }
-        else {
-            u->ypos += u->scale;
-            if (u->ypos > 1023) {
-                u->ypos = 1023;         /* XXX wrap? */
-                u->status |= G2_EDGE;
-                return 1;
-            }
-        }
-    }
-    if (i)
-        point(u->xpos, u->ypos, n);
+    int dx, dy;
+    int n;
 
-    return 0;                           /* no escape */
+    n = (byte >> 4) & 7;
+    dx = xtab[byte & 7] * u->scale * n;
+    dy = ytab[byte & 7] * u->scale * n;
+        
+    u->xpos += dx;
+    u->ypos += dy;
+    if (u->xpos < 0) {
+      u->xpos = 0;
+      u->status |= G2_EDGE;
+    } else if (u->xpos > 1023) {
+      u->xpos = 1023;
+      u->status |= G2_EDGE;
+    }
+
+    if (u->ypos < 0) {
+      u->ypos = 0;
+      u->status |= G2_EDGE;
+    } else if (u->ypos > 1023) {
+      u->ypos = 1023;
+      u->status |= G2_EDGE;
+    }
+
+    if (byte & 010)
+        point(u->xpos, u->ypos, 1);
+
+    return 0;
 }
+
+#include "g2chars.c"
 
 /*
  * Execute one GRAPHICS-2 instruction.
@@ -678,10 +662,12 @@ g2_instruction(g2word inst)
       DEBUGF(("GRAPHICS-2: short vector %06o\n", inst));
       vector(1, inst & 040, inst & 037, inst & 04000, (inst >> 6) & 037);
       break;
-    case 006: /* incremental */
+    case 005: /* incremental */
       DEBUGF(("GRAPHICS-2: incremental %06o\n", inst));
+      ipoint((inst >> 7) & 0177);
+      ipoint(inst & 0177);
       break;
-    case 007: /* slave */
+    case 006: /* slave */
       DEBUGF(("GRAPHICS-2: slave %06o\n", inst));
       break;
     case 010: case 011: case 012: case 013: /* trap */
