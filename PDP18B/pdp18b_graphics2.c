@@ -53,9 +53,10 @@ static int32 iot42 (int32 dev, int32 pulse, int32 dat);
 static int32 iot43 (int32 dev, int32 pulse, int32 dat);
 static int32 iot44 (int32 dev, int32 pulse, int32 dat);
 static int32 iot45 (int32 dev, int32 pulse, int32 dat);
-int32 graphics2_iors (void);
-t_stat graphics2_svc (UNIT *uptr);
-t_stat graphics2_reset (DEVICE *dptr);
+static int32 graphics2_iors (void);
+static t_stat graphics2_svc (UNIT *uptr);
+static t_stat graphics2_reset (DEVICE *dptr);
+static t_stat graphics2_reset (DEVICE *dptr);
 
 DIB graphics2_dib1 = { DEV_G2D1, 4, &graphics2_iors,
 		       { &iot05, &iot06, &iot07, &iot10 } };
@@ -282,16 +283,19 @@ static int32 iot43 (int32 dev, int32 pulse, int32 dat)
   /* 12 LCK, load console keboard. */
 
   if (pulse & 1) {
-    if (g2_sense (G2_KEY))
-      dat |= IOT_SKP;
+      if (display_last_char) {
+	g2_set_flags (G2_KEY);
+	dat |= IOT_SKP;
+      }
   }
 
   if (pulse & 2) {
-      dat |= g2_key ();
+      dat |= display_last_char;
   }
 
   if (pulse & 4) {
       g2_clear_flags (G2_KEY);
+      display_last_char = 0;
   }
 
   return dat;
