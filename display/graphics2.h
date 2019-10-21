@@ -51,6 +51,10 @@ typedef unsigned int g2word;
 #define G2_TEDGE  0000002
 #define G2_BEDGE  0000001
 
+#define G2_DISPLAY_FLAGS \
+  (G2_TRAP|G2_EDGE|G2_STOP|G2_COND|G2_BYTE|G2_CE|G2_IMM|G2_STEP| \
+   G2_DATA|G2_OVER|G2_REDGE|G2_LEDGE|G2_TEDGE|G2_BEDGE)
+
 /*
  * Calls from host into graphics2.c
  */

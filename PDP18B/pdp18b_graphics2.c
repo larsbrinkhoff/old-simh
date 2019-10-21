@@ -178,7 +178,7 @@ static int32 iot05 (int32 dev, int32 pulse, int32 dat)
 
   if (pulse & 001) {
     /* CDF, clear display flags */
-    g2_clear_flags (~0);
+    g2_clear_flags (G2_DISPLAY_FLAGS);
   }
 
   if (pulse & 002) {
@@ -312,15 +312,16 @@ static int32 iot43 (int32 dev, int32 pulse, int32 dat)
       /* 02 0CK, or console keyboard */
       /* 12 LCK, load console keboard. */
       dat |= display_last_char;
+      display_last_char = 0;
   }
 
   if (pulse & 4) {
       /* 04 CCK, clear console keboard. */
       g2_clear_flags (G2_KEY);
-      display_last_char = 0;
       CLR_INT(G2);
   }
 
+  sim_debug(DBG_IOT, &graphics2_dev, "IOT return %06o\n", dat);
   return dat;
 }
 
