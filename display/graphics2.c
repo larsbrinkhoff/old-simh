@@ -608,18 +608,17 @@ ipoint(int byte)
 static void
 g2char (int c)
 {
-  int i;
-  DEBUGF(("G-2 character '%c'\n", c));
-  for (i = 0; i < 16; i++) {
-    g2word x = chargen[c-040][i];
-    if (x == 0)
-      break;
+  g2word x;
+  int i, j, n;
+  n = (chargen[c-040][0] >> 10) & 077;
+  DEBUGF(("G-2 character '%c', %d bytes\n", c, n));
+  for (i = 0, j = 1; i < n; i++) {
+    if ((i % 3) == 0)
+      x = chargen[c-040][j++];
     ipoint ((x >> 12) & 077);
-    ipoint ((x >>  6) & 077);
-    ipoint ((x >>  0) & 077);
+    x <<= 6;
   }
 }
-
 
 /*
  * Execute one GRAPHICS-2 instruction.
