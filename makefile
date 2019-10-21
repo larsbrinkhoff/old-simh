@@ -2074,7 +2074,7 @@ endif
 
 pdp7 : ${BIN}pdp7${EXE}
 
-${BIN}pdp7${EXE} : ${PDP18B} ${PDP18BD}/pdp18b_dpy.c ${DISPLAYL} $(DISPLAY340) ${SIM}
+${BIN}pdp7${EXE} : ${PDP18B} ${PDP18BD}/pdp18b_dpy.c ${DISPLAYL} $(DISPLAY340) $(DISPLAYG2) display/g2chars.c ${SIM}
 	${MKDIRBIN}
 	${CC} ${PDP18B} ${PDP18BD}/pdp18b_dpy.c ${PDP18BD}/pdp18b_graphics2.c ${DISPLAYL} $(DISPLAY340) \
 	$(DISPLAYG2) ${SIM} ${PDP7_OPT} $(CC_OUTSPEC) ${LDFLAGS}
@@ -2093,7 +2093,7 @@ endif
 
 pdp9 : ${BIN}pdp9${EXE}
 
-${BIN}pdp9${EXE} : ${PDP18B} ${SIM}
+${BIN}pdp9${EXE} : ${PDP18B} $(DISPLAYG2) display/g2chars.c ${SIM}
 	${MKDIRBIN}
 	${CC} ${PDP18B} ${PDP18BD}/pdp18b_graphics2.c $(DISPLAYL) $(DISPLAYG2) ${SIM} ${PDP9_OPT} $(CC_OUTSPEC) ${LDFLAGS}
 ifneq (,$(call find_test,${PDP18BD},pdp9))
