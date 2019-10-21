@@ -137,7 +137,7 @@ g2_cycle(void)
 {
     struct graphics2 *u = UNIT(0);
 
-    if (u->status & G2_RUN) {
+    if (u->status & G2_DATA) {
         DEBUGF(("GRAPHICS-2: address %06o\n", u->DAC));
         g2word insn = g2_fetch(u->DAC);
         g2_instruction (insn);
@@ -686,15 +686,15 @@ g2_instruction(g2word inst)
     case 010: case 011: case 012: case 013: /* trap */
     case 014: case 015: case 016: case 017:
       DEBUGF(("GRAPHICS-2: trap %06o\n", inst));
-      u->status &= ~G2_RUN;
+      u->status &= ~G2_DATA;
       u->status |= G2_TRAP;
       break;
     }
 
     if (u->status & G2_STEP)
-      u->status &= ~G2_RUN;
+      u->status &= ~G2_DATA;
 
-    if (u->status & G2_RUN)
+    if (u->status & G2_DATA)
         g2_rfd();                    /* ready for data */
 
     return u->status;

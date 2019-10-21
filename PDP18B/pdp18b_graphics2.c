@@ -178,7 +178,7 @@ static int32 iot05 (int32 dev, int32 pulse, int32 dat)
 
   if (pulse & 001) {
     /* CDF, clear display flags */
-    g2_clear_flags (G2_DISPLAY_FLAGS);
+    g2_clear_flags (~0);
   }
 
   if (pulse & 002) {
@@ -188,8 +188,7 @@ static int32 iot05 (int32 dev, int32 pulse, int32 dat)
 
   if (pulse & 004) {
     /* ECR, enable continuous run */
-    g2_set_flags (G2_RUN);
-    sim_activate_abs (graphics2_unit, 0);
+    g2_clear_flags (G2_STEP);
   }
 
   if (pulse & 020) {
@@ -202,6 +201,7 @@ static int32 iot05 (int32 dev, int32 pulse, int32 dat)
     /* 45 C0N, continue */
     /* 47 BEG, begin */
     g2_set_flags (G2_DATA);
+    sim_activate_abs (graphics2_unit, 0);
   }
 
   return dat;
@@ -257,8 +257,15 @@ static int32 iot14 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7014%02o, %06o\n", pulse, dat);
 
-  /* 01 EIS, enable immediate stop */
-  /* 12 LX, load x. */
+  if (pulse & 001) {
+    /* 01 EIS, enable immediate stop */
+    g2_set_flags (G2_IMM);
+  }
+
+  if (pulse & 002) {
+    /* 12 LX, load x. */
+    dat |= 0;
+  }
 
   return dat;
 }
@@ -267,9 +274,19 @@ static int32 iot34 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7034%02o, %06o\n", pulse, dat);
 
-  /* 01 E0V, enable override */
-  /* 12 LY, load y. */
-  /* 21 D0V, disable override. */
+  if (pulse & 001) {
+    if (pulse & 002)
+      /* 21 D0V, disable override. */
+      g2_clear_flags (G2_OVER);
+    else
+      /* 01 E0V, enable override */
+      g2_set_flags (G2_OVER);
+  }
+
+  if (pulse & 002) {
+    /* 12 LY, load y. */
+    dat |= 0;
+  }
 
   return dat;
 }
@@ -279,16 +296,12 @@ static int32 iot42 (int32 dev, int32 pulse, int32 dat)
   sim_debug(DBG_IOT, &graphics2_dev, "7042%02o, %06o\n", pulse, dat);
 
   /* 06 WCGA, unknown.  Unix passes 3072 in AC. */
+  /* Maybe write character generator address. */
 }
 
 static int32 iot43 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7043%02o, %06o (%03o)\n", pulse, dat, display_last_char);
-
-  /* 01 SCK, skip on console keyboard */
-  /* 02 0CK, or console keyboard */
-  /* 04 CCK, clear console keboard. */
-  /* 12 LCK, load console keboard. */
 
   if (pulse & 1) {
     if (g2_sense (G2_KEY))
@@ -296,10 +309,13 @@ static int32 iot43 (int32 dev, int32 pulse, int32 dat)
   }
 
   if (pulse & 2) {
+      /* 02 0CK, or console keyboard */
+      /* 12 LCK, load console keboard. */
       dat |= display_last_char;
   }
 
   if (pulse & 4) {
+      /* 04 CCK, clear console keboard. */
       g2_clear_flags (G2_KEY);
       display_last_char = 0;
       CLR_INT(G2);
@@ -312,30 +328,28 @@ static int32 iot44 (int32 dev, int32 pulse, int32 dat)
 {
   sim_debug(DBG_IOT, &graphics2_dev, "7044%02o, %06o\n", pulse, dat);
 
-  /* 01 SPB, skip push button */
-  /* 02 0PB, or push button */
-  /* 04 CPB, clear push button. */
-  /* 12 LPB, load push button. */
-  /* 24 WBL, write button lights. */
-  /* 32 LBL, load button lights. */
-
   if (pulse & 1) {
-    if (g2_sense (G2_BUT)) {
+    /* 01 SPB, skip push button */
+    if (g2_sense (G2_BUT))
       dat |= IOT_SKP;
-    }
   }
 
   if (pulse & 2) {
     if (pulse & 020)
+      /* 32 LBL, load button lights. */
       dat |= g2_get_lights ();
     else      
+      /* 02 0PB, or push button */
+      /* 12 LPB, load push button. */
       dat |= g2_buttons ();
   }
 
   if (pulse & 4) {
     if (pulse & 020)
+      /* 24 WBL, write button lights. */
       g2_set_lights (dat);
     else
+      /* 04 CPB, clear push button. */
       g2_clear_flags (G2_BUT);
   }
 
