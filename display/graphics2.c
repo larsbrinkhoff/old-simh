@@ -602,6 +602,13 @@ g2char (int c)
 {
   g2word x;
   int i, j, n;
+
+  if (c < 040 || c > 0177)
+  {
+    DEBUGF(("G-2 character %04o ignored\r\n", c));
+    return;
+  }
+
   n = (chargen[c-040][0] >> 10) & 077;
   DEBUGF(("G-2 character '%c', %d bytes\r\n", c, n));
   for (i = 0, j = 1; i < n; i++) {
