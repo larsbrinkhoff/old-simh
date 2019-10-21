@@ -33,6 +33,8 @@
 #include "display/graphics2.h"
 #include "display/display.h"
 
+extern int32 int_hwre[API_HLVL+1];
+
 #define DBG_IOT         001         /* IOT instructions. */
 #define DBG_IRQ         002         /* Interrupts. */
 #define DBG_INS         004         /* 340 instructions. */
@@ -119,6 +121,12 @@ t_stat graphics2_svc (UNIT *uptr)
   sim_activate_after(uptr, DPY_CYCLE_US);
   display_age(DPY_CYCLE_US, 0);
   g2_cycle();
+
+  if (display_last_char) {
+    g2_set_flags (G2_KEY);
+    SET_INT (G2);
+  }
+
   return SCPE_OK;
 }
 
@@ -275,7 +283,7 @@ static int32 iot42 (int32 dev, int32 pulse, int32 dat)
 
 static int32 iot43 (int32 dev, int32 pulse, int32 dat)
 {
-  sim_debug(DBG_IOT, &graphics2_dev, "7043%02o, %06o\n", pulse, dat);
+  sim_debug(DBG_IOT, &graphics2_dev, "7043%02o, %06o (%03o)\n", pulse, dat, display_last_char);
 
   /* 01 SCK, skip on console keyboard */
   /* 02 0CK, or console keyboard */
@@ -283,10 +291,8 @@ static int32 iot43 (int32 dev, int32 pulse, int32 dat)
   /* 12 LCK, load console keboard. */
 
   if (pulse & 1) {
-      if (display_last_char) {
-	g2_set_flags (G2_KEY);
+    if (g2_sense (G2_KEY))
 	dat |= IOT_SKP;
-      }
   }
 
   if (pulse & 2) {
@@ -296,6 +302,7 @@ static int32 iot43 (int32 dev, int32 pulse, int32 dat)
   if (pulse & 4) {
       g2_clear_flags (G2_KEY);
       display_last_char = 0;
+      CLR_INT(G2);
   }
 
   return dat;

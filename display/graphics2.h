@@ -56,7 +56,6 @@ g2word g2_instruction(g2word inst);
 g2word g2_get_address(void);
 g2word g2_sense(g2word);
 g2word g2_buttons(void);
-g2word g2_key(void);
 g2word g2_get_lights(void);
 g2word g2_get_flags(void);
 void g2_cycle(void);
