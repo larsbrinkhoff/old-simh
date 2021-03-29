@@ -91,6 +91,7 @@ crt_reset (DEVICE *dptr)
   } else {
     display_reset ();
     imlac_init (dptr, 1);
+    vid_refresh_mode=1;                     /* Use alternate window manager */
     sim_activate_abs (&crt_unit, 0);
     vid_register_quit_callback (&crt_quit_callback);
   }

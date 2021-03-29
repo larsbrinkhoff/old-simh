@@ -200,7 +200,7 @@ static struct display displays[] = {
      * light pen: Type 375
      * weight 85lb
      */
-    { DIS_VR17, "VR17", &color_p29, NULL, 1024, 1024 },
+    { DIS_VR17, "VR17", &color_p40, NULL, 1024, 1024 },
 
     /*
      * VR20
@@ -661,6 +661,8 @@ display_age(int t,          /* simulated us since last call */
     t = elapsed / DELAY_UNIT;
     elapsed %= DELAY_UNIT;
 
+    return 0;
+
     ++refresh_elapsed;
     if (refresh_elapsed >= refresh_interval) {
         display_sync ();
@@ -728,6 +730,11 @@ intensify(int x,            /* 0..xpixels */
 
     if (x < 0 || x >= xpixels || y < 0 || y >= ypixels)
         return 0;           /* limit to display */
+
+    if (vid_refresh_mode) {
+        ws_display_point(x, y, colors[color][level][19]);
+        return 0;
+    }
 
     p = P(x,y);
     if (p->ttl) {           /* currently lit? */

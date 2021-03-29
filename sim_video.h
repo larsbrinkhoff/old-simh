@@ -211,9 +211,10 @@ t_stat vid_show (FILE* st, DEVICE *dptr,  UNIT* uptr, int32 val, CONST char* des
 t_stat vid_screenshot (const char *filename);
 t_bool vid_is_fullscreen (void);
 t_stat vid_set_fullscreen (t_bool flag);
-
+void vid_write_surface(uint32 *buf);
 extern int vid_active;
 void vid_set_cursor_position (int32 x, int32 y);        /* cursor position (set by calling code) */
+extern t_stat vid_refresh_mode;                                /* New flag for alternate window management */
 
 t_stat vid_open_window (VID_DISPLAY **vptr, DEVICE *dptr, const char *title, uint32 width, uint32 height, int flags);
 t_stat vid_close_window (VID_DISPLAY *vptr);

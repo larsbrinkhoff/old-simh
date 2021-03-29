@@ -47,6 +47,7 @@ static uint16 dp_iot (uint16, uint16);
 static t_stat dp_svc (UNIT *uptr);
 static uint16 sync_iot (uint16, uint16);
 static t_stat sync_svc (UNIT *uptr);
+extern void display_sync();
 
 static IMDEV dp_imdev = {
   3,
@@ -448,25 +449,28 @@ static t_stat
 dp_svc(UNIT * uptr)
 {
   uint16 insn;
+  int i;
 
   if (sim_brk_summ && sim_brk_test(DPC, SWMASK('D'))) {
     sim_activate_abs (&dp_unit, 0);
     return sim_messagef (SCPE_STOP, "Display processor breakpoint.\n");
   }
 
-  sim_debug (DBG, &dp_dev, "%06o ", DPC);
-  insn = M[DPC];
-  DPC++;
-  if (MODE) {
-    sim_debug (DBG, &dp_dev, "INC ");
-    dp_inc (insn >> 8);
+  for (i = 0; ON && i < 1; i++) {
+    sim_debug (DBG, &dp_dev, "%06o ", DPC);
+    insn = M[DPC];
+    DPC++;
     if (MODE) {
-      sim_debug (DBG, &dp_dev, ",");
-      dp_inc (insn & 0377);
-    }
-    sim_debug (DBG, &dp_dev, "\n");
-  } else
-    dp_insn (insn);
+      sim_debug (DBG, &dp_dev, "INC ");
+      dp_inc (insn >> 8);
+      if (MODE) {
+        sim_debug (DBG, &dp_dev, ",");
+        dp_inc (insn & 0377);
+      }
+      sim_debug (DBG, &dp_dev, "\n");
+    } else
+      dp_insn (insn);
+  }
 
   if (ON)
     sim_activate_after (&dp_unit, 2);
@@ -493,6 +497,7 @@ sync_iot (uint16 insn, uint16 AC)
     SYNC = 0;
     flag_off (FLAG_SYNC);
     sim_activate_after (&sync_unit, 25000);
+    display_sync();
   }
   if ((insn & 0772) == 0072) { /* IOS */
   }

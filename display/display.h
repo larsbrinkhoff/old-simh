@@ -62,6 +62,8 @@ enum display_type {
 #define RES_QUARTER 4
 #define RES_EIGHTH  8
 
+extern int vid_refresh_mode;                                /* New flag for alternate window management */
+
 /*
  * must be called before first call to display_age()
  * (but called implicitly by display_point())

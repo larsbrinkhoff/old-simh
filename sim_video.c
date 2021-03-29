@@ -33,6 +33,7 @@
 int vid_active = 0;
 int32 vid_cursor_x;
 int32 vid_cursor_y;
+t_stat vid_refresh_mode=0;
 t_bool vid_mouse_b1 = FALSE;
 t_bool vid_mouse_b2 = FALSE;
 t_bool vid_mouse_b3 = FALSE;
@@ -40,6 +41,8 @@ static VID_QUIT_CALLBACK vid_quit_callback = NULL;
 static VID_GAMEPAD_CALLBACK motion_callback[10];
 static VID_GAMEPAD_CALLBACK button_callback[10];
 static int vid_gamepad_inited = 0;
+static SDL_Surface *srfce=0;
+static double colmap[]={0.8,0.8,0.8};
 
 t_stat vid_register_quit_callback (VID_QUIT_CALLBACK callback)
 {
@@ -537,6 +540,27 @@ if (!vptr->vid_ready) {
 return SCPE_OK;
 }
 #endif
+
+
+/* This is a fast synchrounous window update including phophor decay */
+
+void vid_write_surface(uint32 *buf)
+{
+    int i,j,surlen;
+    unsigned char *p;
+    double *d;
+
+    if (!srfce)
+        srfce=SDL_GetWindowSurface(vid_first.vid_window);
+    surlen=vid_first.vid_height*vid_first.vid_width;
+    memcpy(srfce->pixels,buf,surlen*4);
+    SDL_UpdateWindowSurface(vid_first.vid_window);
+    for (i = 0,p=(unsigned char *)buf;i < surlen; i++, p++)
+        for (j = 0,d = colmap;j < 3;j++, p++, d++)
+            if (*p)
+                *p = (unsigned char)(*p * (*d) - 1);	// Decay none zero pixels only
+
+}
 
 static void vid_controllers_setup (DEVICE *dev)
 {
@@ -1544,6 +1568,7 @@ if (flag)
     SDL_SetWindowFullscreen (vptr->vid_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 else
     SDL_SetWindowFullscreen (vptr->vid_window, 0);
+srfce=0;
 return SCPE_OK;
 }
 
@@ -2704,6 +2729,10 @@ t_stat vid_set_fullscreen_window (VID_DISPLAY *vptr, t_bool flag)
 {
 sim_printf ("video support unavailable\n");
 return SCPE_OK;
+}
+
+void vid_write_surface(uint32 *buf)
+{
 }
 
 void vid_set_cursor_position_window (VID_DISPLAY *vptr, int32 x, int32 y)

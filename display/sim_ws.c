@@ -474,6 +474,10 @@ ws_display_point(int x, int y, void *color)
   
 void
 ws_sync(void) {
+    if (vid_refresh_mode) {
+        vid_write_surface(surface);
+        return;
+    }
     vid_draw (0, 0, xpixels, ypixels, surface);
     vid_refresh ();
 }

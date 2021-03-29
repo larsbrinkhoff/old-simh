@@ -201,6 +201,7 @@ kbd_both (uint32 key)
   case SIM_KEY_KP_INSERT:
     code = 0030; // KP_0
     break;
+  case SIM_KEY_INSERT:
   case SIM_KEY_PAUSE:
     code = 0031; // BRK
     break;
