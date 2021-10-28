@@ -422,6 +422,7 @@ void hi_poll_rx (uint16 line)
              && PHIDB(line)->rxsize > 1) {
     // No data left, time to signal end of message if the UDP packet said so.
     PHIDB(line)->eom = TRUE;
+    count = 1;
   } else {
     // Get a new UDP packet.
     count = udp_receive(PDEVICE(line), PHIDB(line)->link, PHIDB(line)->rxdata, MAXDATA);
