@@ -97,10 +97,10 @@ crt_line (uint16 x1, uint16 y1, uint16 x2, uint16 y2, uint16 i)
 {
   sim_debug (DBG, &crt_dev, "Line %d,%d - %d,%d @ %d\n", x1, y1, x2, y2, i);
 #ifdef USE_DISPLAY
-  if ((crt_dev.flags & DEV_DIS) == 0 && !sim_is_active (&crt_unit))
-    sim_activate_abs (&crt_unit, 0);
   if (crt_dev.flags & DEV_DIS)
     return;
+  if (!sim_is_active (&crt_unit))
+    sim_activate_abs (&crt_unit, 0);
   tt2500_line (x1, y1, x2, y2, i);
 #endif
 }

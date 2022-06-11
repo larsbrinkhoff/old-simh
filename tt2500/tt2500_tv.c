@@ -128,7 +128,7 @@ void tv_line (int row, uint8 *line, uint8 *font)
   line[72] = 0;
   sim_debug (DBG, &tv_dev, "Text row %d: %s\n", row, (char *)line);
 
-  if (tv_dev.flags & DEV_DIS)
+  if (vptr == NULL)
     return;
 
   for (col = 0; col < 72; col++)
@@ -138,7 +138,7 @@ void tv_line (int row, uint8 *line, uint8 *font)
 
 void tv_refresh (void)
 {
-  if (tv_dev.flags & DEV_DIS)
+  if (vptr == NULL)
     return;
   sim_debug (DBG, &tv_dev, "Refresh screen.\n");
   vid_refresh_window (vptr);
