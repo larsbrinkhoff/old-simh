@@ -592,6 +592,7 @@ static int32 iot42 (int32 dev, int32 pulse, int32 dat)
 
   /* 06 WCGA, unknown.  Unix passes 3072 in AC. */
   /* Maybe write character generator address. */
+  return dat;
 }
 
 static int32 iot43 (int32 dev, int32 pulse, int32 dat)
